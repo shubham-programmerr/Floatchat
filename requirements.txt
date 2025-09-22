@@ -1,4 +1,4 @@
-# requirements.txt (Final Deployment Version)
+# requirements.txt (Final Version for Python 3.12+)
 streamlit
 pandas
 xarray
@@ -15,9 +15,5 @@ tiktoken
 plotly
 geoalchemy2
 
-# ChromaDB specific dependencies
-chromadb==0.4.24
-pysqlite3-binary
-
-# Pinning numpy to a compatible version
-numpy==1.23.5
+# Use a modern version of chromadb compatible with new Python/NumPy
+chromadb>=0.5.0
