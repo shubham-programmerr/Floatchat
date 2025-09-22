@@ -13,6 +13,7 @@ langchain-google-genai
 sentence-transformers
 tiktoken
 plotly
+geoalchemy2
 
 # ChromaDB specific dependencies
 chromadb==0.4.24
