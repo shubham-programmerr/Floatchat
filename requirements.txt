@@ -1,4 +1,4 @@
-# requirements.txt
+# requirements.txt (Cloud Deployment Version)
 streamlit
 pandas
 xarray
@@ -10,7 +10,10 @@ psycopg2-binary
 geopandas
 langchain
 langchain-google-genai
-chromadb
 sentence-transformers
 tiktoken
 plotly
+
+# ChromaDB specific dependencies for cloud deployment
+chromadb==0.4.24
+pysqlite3-binary
