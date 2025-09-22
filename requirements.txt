@@ -1,0 +1,16 @@
+# requirements.txt
+streamlit
+pandas
+xarray
+netcdf4
+dask
+pyarrow
+sqlalchemy
+psycopg2-binary
+geopandas
+langchain
+langchain-google-genai
+chromadb
+sentence-transformers
+tiktoken
+plotly
