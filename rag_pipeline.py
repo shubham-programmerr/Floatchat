@@ -10,7 +10,7 @@ import numpy as np
 
 # --- Configuration ---
 DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
-GOOGLE_API_key = st.secrets["AIzaSyBBTB4Jz--FOkxzS8qepBsmeotA4QFc2OU "]
+GOOGLE_API_key = st.secrets["AIzaSyBEpSu05Z3jeroEHB4eti15DCSEJfovqc0"]
 
 # --- Initialize Models and Database Connection ---
 llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=GOOGLE_API_key)
