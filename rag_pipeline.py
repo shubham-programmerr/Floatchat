@@ -1,20 +1,28 @@
-# rag_pipeline.py
+# rag_pipeline.py (Final Version with FAISS)
 import streamlit as st
-import chromadb
 import pandas as pd
 from sqlalchemy import create_engine
 from langchain.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
+import faiss
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
-# Use Streamlit's secrets for database connection and API key
+# --- Configuration ---
 DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
-GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+GOOGLE_API_key = st.secrets["GOOGLE_API_KEY"]
 
-# Initialize connections
-llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=GOOGLE_API_KEY)
+# --- Initialize Models and Database Connection ---
+llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=GOOGLE_API_key)
 db_engine = create_engine(DB_CONNECTION_STRING)
+# Use a cached model for sentence embeddings
+@st.cache_resource
+def get_retriever_model():
+    return SentenceTransformer('all-MiniLM-L6-v2')
 
-# Initialize ChromaDB and populate with metadata
+retriever_model = get_retriever_model()
+
+# --- Build the In-Memory FAISS Vector Store ---
 metadata_docs = [
     "Table 'argo_profiles' contains oceanographic data from ARGO floats.",
     "Column 'latitude' and 'longitude' are the float's coordinates.",
@@ -25,26 +33,24 @@ metadata_docs = [
     "Column 'doxy_adjusted' is the dissolved oxygen level.",
     "Column 'chla_adjusted' is the Chlorophyll-a concentration."
 ]
-client = chromadb.Client()
-collection = client.get_or_create_collection("argo_schema_docs")
-if collection.count() == 0:
-    collection.add(
-        documents=metadata_docs,
-        ids=[f"doc_{i}" for i in range(len(metadata_docs))]
-    )
+
+doc_embeddings = retriever_model.encode(metadata_docs)
+index = faiss.IndexFlatL2(doc_embeddings.shape[1])
+index.add(doc_embeddings.astype('float32'))
 
 def get_sql_from_question(question: str) -> str:
-    """Generates a SQL query from a natural language question using RAG."""
-    retrieved_docs = collection.query(query_texts=[question], n_results=4)
-    context = "\n".join(retrieved_docs['documents'][0])
+    """Generates an SQL query from a natural language question using FAISS for RAG."""
+    question_embedding = retriever_model.encode([question])
+    distances, indices = index.search(question_embedding.astype('float32'), k=3)
     
+    context = "\n".join([metadata_docs[i] for i in indices[0]])
+
     template = """
     You are an expert PostgreSQL and PostGIS data scientist. Given the table schema and context, write a single, valid SQL query to answer the user's question.
-    Use date functions for time queries. The current date is {current_date}.
-    Use PostGIS functions for geospatial queries. Output ONLY the SQL query.
+    The current date is {current_date}. Output ONLY the SQL query.
 
     ### Schema:
-    CREATE TABLE argo_profiles (N_PROF INTEGER, latitude FLOAT, longitude FLOAT, timestamp TIMESTAMP, pressure FLOAT, temperature FLOAT, salinity FLOAT, doxy_adjusted FLOAT, chla_adjusted FLOAT, geometry GEOMETRY(Point, 4326));
+    CREATE TABLE argo_profiles (n_prof INTEGER, latitude FLOAT, longitude FLOAT, timestamp TIMESTAMP, pressure FLOAT, temperature FLOAT, salinity FLOAT, doxy_adjusted FLOAT, chla_adjusted FLOAT, geometry GEOMETRY(Point, 4326));
 
     ### Context:
     {context}
@@ -59,7 +65,7 @@ def get_sql_from_question(question: str) -> str:
         context=context,
         question=question
     )
-    # Using .invoke for newer LangChain versions with Gemini
+    
     response = llm.invoke(prompt)
     return response.content.strip()
 
