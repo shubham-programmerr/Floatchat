@@ -1,4 +1,4 @@
-# app.py
+# app.py (Final Version)
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -8,6 +8,7 @@ from rag_pipeline import get_sql_from_question, execute_query
 st.set_page_config(page_title="FloatChat", layout="wide")
 st.title("FloatChat 🌊 - AI Interface for ARGO Ocean Data")
 st.caption("A Proof-of-Concept powered by Google Gemini")
+st.markdown("Data sourced from the Argo Program, including the [Indian Argo Project](https://incois.gov.in/OON/index.jsp).")
 
 # --- Main App Logic ---
 if "messages" not in st.session_state:
@@ -20,7 +21,7 @@ for message in st.session_state.messages:
         else:
             st.markdown(message["content"])
 
-if prompt := st.chat_input("Compare temperature profiles for profiles 10 and 25..."):
+if prompt := st.chat_input("Show the temperature and pressure for the first 10 profiles..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -51,9 +52,9 @@ if prompt := st.chat_input("Compare temperature profiles for profiles 10 and 25.
                             st.caption("Float Trajectory/Positions")
                             st.map(result_df[['latitude', 'longitude']])
                         
-                        if 'N_PROF' in result_df.columns and result_df['N_PROF'].nunique() > 1 and 'temperature' in result_df.columns:
+                        if 'n_prof' in result_df.columns and result_df['n_prof'].nunique() > 1 and 'temperature' in result_df.columns:
                             st.caption("Profile Comparison")
-                            fig = px.line(result_df, y='pressure', x='temperature', color='N_PROF', title='Profile Comparison')
+                            fig = px.line(result_df, y='pressure', x='temperature', color='n_prof', title='Profile Comparison')
                             fig.update_yaxes(autorange="reversed")
                             st.plotly_chart(fig, use_container_width=True)
 
