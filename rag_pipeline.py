@@ -1,4 +1,4 @@
-# rag_pipeline.py (Final Version with FAISS)
+# rag_pipeline.py (Final Version with FAISS and Correct Model)
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
@@ -13,8 +13,10 @@ DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
 GOOGLE_API_key = st.secrets["GEMINI_API_KEY"]
 
 # --- Initialize Models and Database Connection ---
-llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=GOOGLE_API_key)
+# Use the updated, correct model name here
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", google_api_key=GOOGLE_API_key)
 db_engine = create_engine(DB_CONNECTION_STRING)
+
 # Use a cached model for sentence embeddings
 @st.cache_resource
 def get_retriever_model():
