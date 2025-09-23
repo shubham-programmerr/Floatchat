@@ -1,4 +1,4 @@
-# rag_pipeline.py (Definitive Version with Robust SQL Cleaning)
+# rag_pipeline.py (Final Version)
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
@@ -64,16 +64,15 @@ def get_sql_from_question(question: str) -> str:
         question=question
     )
     
-    response = ll.invoke(prompt)
+    response = llm.invoke(prompt)
     sql_query = response.content.strip()
     
-    # --- ROBUST CLEANING LOGIC ---
-    # Find the start of the actual SQL command, ignoring any leading text
+    # Robustly find the start of the SQL command
     select_pos = sql_query.upper().find("SELECT")
     if select_pos != -1:
         sql_query = sql_query[select_pos:]
     
-    # Remove trailing markdown backticks if they exist
+    # Remove trailing markdown backticks
     if sql_query.endswith("```"):
         sql_query = sql_query[:-3]
         
