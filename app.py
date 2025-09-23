@@ -1,4 +1,4 @@
-# app.py (Final Version)
+# app.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -63,6 +63,7 @@ if prompt := st.chat_input("Show the temperature and pressure for the first 10 p
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='csv')
                         
-                        ds_export = result_df.to_xarray()
+                        df_for_export = result_df.drop(columns=['geometry'], errors='ignore')
+                        ds_export = df_for_export.to_xarray()
                         netcdf_bytes = ds_export.to_netcdf()
                         st.download_button("Download as NetCDF", netcdf_bytes, "argo_data.nc", "application/x-netcdf", key='netcdf')
