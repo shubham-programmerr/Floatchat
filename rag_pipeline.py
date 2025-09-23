@@ -37,6 +37,8 @@ doc_embeddings = retriever_model.encode(metadata_docs)
 index = faiss.IndexFlatL2(doc_embeddings.shape[1])
 index.add(doc_embeddings.astype('float32'))
 
+# In rag_pipeline.py
+
 def get_sql_from_question(question: str) -> str:
     """Generates an SQL query from a natural language question using FAISS for RAG."""
     question_embedding = retriever_model.encode([question])
@@ -63,9 +65,20 @@ def get_sql_from_question(question: str) -> str:
         context=context,
         question=question
     )
-    response = llm.invoke(prompt)
-    return response.content.strip()
 
+    response = llm.invoke(prompt)
+    sql_query = response.content.strip()
+
+    # --- ADDED LINES TO CLEAN THE SQL ---
+    # Remove markdown formatting if the LLM includes it
+    if sql_query.startswith("```sql"):
+        sql_query = sql_query[5:] # Remove ```sql
+    if sql_query.endswith("```"):
+        sql_query = sql_query[:-3] # Remove ```
+
+    return sql_query.strip()
+
+# ... (the rest of the file is unchanged) ...
 def execute_query(sql: str):
     """Executes the SQL query and returns a DataFrame and error message."""
     try:
