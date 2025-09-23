@@ -1,4 +1,4 @@
-# app.py
+# app.py (Final Definitive Version)
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -48,43 +48,41 @@ if prompt := st.chat_input("Show the temperature and pressure for the first 10 p
                     vis_col, export_col = st.columns([3, 1])
                     
                     with vis_col:
-                        if 'latitude' in result_df.columns and result_df['latitude'].nunique() > 1:
+                        if 'latitude' in result_df.columns and 'longitude' in result_df.columns and result_df['latitude'].nunique() > 1:
                             st.caption("Float Trajectory/Positions")
                             st.map(result_df[['latitude', 'longitude']])
                         
-                        if 'n_prof' in result_df.columns and result_df['n_prof'].nunique() > 1 and 'temperature' in result_df.columns:
+                        if 'n_prof' in result_df.columns and result_df['n_prof'].nunique() > 1 and 'temperature' in result_df.columns and 'pressure' in result_df.columns:
                             st.caption("Profile Comparison")
                             fig = px.line(result_df, y='pressure', x='temperature', color='n_prof', title='Profile Comparison')
                             fig.update_yaxes(autorange="reversed")
                             st.plotly_chart(fig, use_container_width=True)
 
-                    # In app.py
-
                     with export_col:
                         st.caption("Download Data")
                         
-                        # CSV export (this part is fine)
+                        # CSV export
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='csv')
                         
                         # --- CORRECTED NetCDF EXPORT LOGIC ---
-                        try:
-                            # Drop the geometry column which is not compatible with NetCDF
-                            df_for_export = result_df.drop(columns=['geometry'], errors='ignore')
-                            
-                            # Set a multi-index to correctly structure the data for xarray
-                            df_indexed = df_for_export.set_index(['n_prof', 'pressure'])
-                            
-                            # Convert the properly indexed DataFrame to an xarray Dataset
-                            ds_export = df_indexed.to_xarray()
-                            netcdf_bytes = ds_export.to_netcdf()
-                            
-                            st.download_button(
-                                "Download as NetCDF", 
-                                netcdf_bytes, 
-                                "argo_data.nc", 
-                                "application/x-netcdf", 
-                                key='netcdf'
-                            )
-                        except Exception as e:
-                            st.error(f"Failed to generate NetCDF file: {e}")
+                        # Only try to create a NetCDF if the required columns are present
+                        required_cols = {'n_prof', 'pressure'}
+                        if required_cols.issubset(result_df.columns):
+                            try:
+                                df_for_export = result_df.drop(columns=['geometry'], errors='ignore')
+                                df_indexed = df_for_export.set_index(['n_prof', 'pressure'])
+                                ds_export = df_indexed.to_xarray()
+                                netcdf_bytes = ds_export.to_netcdf()
+                                
+                                st.download_button(
+                                    "Download as NetCDF", 
+                                    netcdf_bytes, 
+                                    "argo_data.nc", 
+                                    "application/x-netcdf", 
+                                    key='netcdf'
+                                )
+                            except Exception as e:
+                                st.error(f"Failed to generate NetCDF file: {e}")
+                        else:
+                            st.warning("NetCDF export requires 'n_prof' and 'pressure' columns in the data.")
