@@ -58,12 +58,33 @@ if prompt := st.chat_input("Show the temperature and pressure for the first 10 p
                             fig.update_yaxes(autorange="reversed")
                             st.plotly_chart(fig, use_container_width=True)
 
+                    # In app.py
+
                     with export_col:
                         st.caption("Download Data")
+                        
+                        # CSV export (this part is fine)
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='csv')
                         
-                        df_for_export = result_df.drop(columns=['geometry'], errors='ignore')
-                        ds_export = df_for_export.to_xarray()
-                        netcdf_bytes = ds_export.to_netcdf()
-                        st.download_button("Download as NetCDF", netcdf_bytes, "argo_data.nc", "application/x-netcdf", key='netcdf')
+                        # --- CORRECTED NetCDF EXPORT LOGIC ---
+                        try:
+                            # Drop the geometry column which is not compatible with NetCDF
+                            df_for_export = result_df.drop(columns=['geometry'], errors='ignore')
+                            
+                            # Set a multi-index to correctly structure the data for xarray
+                            df_indexed = df_for_export.set_index(['n_prof', 'pressure'])
+                            
+                            # Convert the properly indexed DataFrame to an xarray Dataset
+                            ds_export = df_indexed.to_xarray()
+                            netcdf_bytes = ds_export.to_netcdf()
+                            
+                            st.download_button(
+                                "Download as NetCDF", 
+                                netcdf_bytes, 
+                                "argo_data.nc", 
+                                "application/x-netcdf", 
+                                key='netcdf'
+                            )
+                        except Exception as e:
+                            st.error(f"Failed to generate NetCDF file: {e}")
