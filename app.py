@@ -1,4 +1,4 @@
-# app.py (Final Definitive Version)
+# app.py (Final Version with Visualization Toggle)
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -45,20 +45,25 @@ if prompt := st.chat_input("Show the temperature and pressure for the first 10 p
                     st.markdown("---")
                     st.subheader("📊 Visualizations & Export")
                     
+                    # --- ADDED CHECKBOX FOR CONTROL ---
+                    show_visuals = st.checkbox("Show Visualizations", value=True)
+                    
                     vis_col, export_col = st.columns([3, 1])
                     
-                    with vis_col:
-                        # Condition to show the map
-                        if 'latitude' in result_df.columns and 'longitude' in result_df.columns and result_df['latitude'].nunique() > 1:
-                            st.caption("Float Trajectory/Positions")
-                            st.map(result_df[['latitude', 'longitude']])
-                        
-                        # Condition to show the comparison chart
-                        if 'n_prof' in result_df.columns and result_df['n_prof'].nunique() > 1 and 'temperature' in result_df.columns and 'pressure' in result_df.columns:
-                            st.caption("Profile Comparison")
-                            fig = px.line(result_df, y='pressure', x='temperature', color='n_prof', title='Profile Comparison')
-                            fig.update_yaxes(autorange="reversed")
-                            st.plotly_chart(fig, use_container_width=True)
+                    # --- VISUALS ARE NOW INSIDE THIS 'IF' BLOCK ---
+                    if show_visuals:
+                        with vis_col:
+                            # Condition to show the map
+                            if 'latitude' in result_df.columns and 'longitude' in result_df.columns and result_df['latitude'].nunique() > 1:
+                                st.caption("Float Trajectory/Positions")
+                                st.map(result_df[['latitude', 'longitude']])
+                            
+                            # Condition to show the comparison chart
+                            if 'n_prof' in result_df.columns and result_df['n_prof'].nunique() > 1 and 'temperature' in result_df.columns and 'pressure' in result_df.columns:
+                                st.caption("Profile Comparison")
+                                fig = px.line(result_df, y='pressure', x='temperature', color='n_prof', title='Profile Comparison')
+                                fig.update_yaxes(autorange="reversed")
+                                st.plotly_chart(fig, use_container_width=True)
 
                     with export_col:
                         st.caption("Download Data")
@@ -67,14 +72,11 @@ if prompt := st.chat_input("Show the temperature and pressure for the first 10 p
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='csv')
                         
-                        # NetCDF export with all checks
+                        # NetCDF export
                         required_cols = {'n_prof', 'pressure'}
                         if required_cols.issubset(result_df.columns):
                             try:
-                                # Drop geometry column if it exists
                                 df_for_export = result_df.drop(columns=['geometry'], errors='ignore')
-                                
-                                # Set index for proper conversion
                                 df_indexed = df_for_export.set_index(['n_prof', 'pressure'])
                                 ds_export = df_indexed.to_xarray()
                                 netcdf_bytes = ds_export.to_netcdf()
