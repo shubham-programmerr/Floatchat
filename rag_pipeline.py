@@ -1,4 +1,4 @@
-# rag_pipeline.py (Final Version)
+# rag_pipeline.py (Definitive Version with Robust SQL Cleaning)
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
@@ -37,10 +37,8 @@ doc_embeddings = retriever_model.encode(metadata_docs)
 index = faiss.IndexFlatL2(doc_embeddings.shape[1])
 index.add(doc_embeddings.astype('float32'))
 
-# In rag_pipeline.py
-
 def get_sql_from_question(question: str) -> str:
-    """Generates an SQL query from a natural language question using FAISS for RAG."""
+    """Generates and robustly cleans an SQL query from a natural language question."""
     question_embedding = retriever_model.encode([question])
     distances, indices = index.search(question_embedding.astype('float32'), k=3)
     context = "\n".join([metadata_docs[i] for i in indices[0]])
@@ -65,20 +63,22 @@ def get_sql_from_question(question: str) -> str:
         context=context,
         question=question
     )
-
-    response = llm.invoke(prompt)
+    
+    response = ll.invoke(prompt)
     sql_query = response.content.strip()
-
-    # --- ADDED LINES TO CLEAN THE SQL ---
-    # Remove markdown formatting if the LLM includes it
-    if sql_query.startswith("```sql"):
-        sql_query = sql_query[5:] # Remove ```sql
+    
+    # --- ROBUST CLEANING LOGIC ---
+    # Find the start of the actual SQL command, ignoring any leading text
+    select_pos = sql_query.upper().find("SELECT")
+    if select_pos != -1:
+        sql_query = sql_query[select_pos:]
+    
+    # Remove trailing markdown backticks if they exist
     if sql_query.endswith("```"):
-        sql_query = sql_query[:-3] # Remove ```
-
+        sql_query = sql_query[:-3]
+        
     return sql_query.strip()
 
-# ... (the rest of the file is unchanged) ...
 def execute_query(sql: str):
     """Executes the SQL query and returns a DataFrame and error message."""
     try:
