@@ -1,19 +1,27 @@
-# requirements.txt (Final Version with FAISS)
+# requirements.txt
+
+# --- Frontend ---
 streamlit
+
+# --- Data Processing ---
 pandas
 xarray
 netcdf4
 dask
 pyarrow
+
+# --- Database & Geospatial ---
 sqlalchemy
 psycopg2-binary
 geopandas
-langchain
-langchain-google-genai
-sentence-transformers
-tiktoken
-plotly
 geoalchemy2
 
-# Vector store using FAISS (Facebook AI Similarity Search)
+# --- AI & Language Model ---
+langchain
+langchain-google-genai==1.3.1  # Pinned version to fix API error
+sentence-transformers
 faiss-cpu
+tiktoken
+
+# --- Visualization ---
+plotly
