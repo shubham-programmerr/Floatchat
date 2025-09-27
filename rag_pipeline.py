@@ -1,9 +1,7 @@
-# rag_pipeline.py (Corrected for new LangChain version)
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
-# CORRECTED: PromptTemplate is now in langchain_core
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate # THIS LINE IS CRITICAL
 from langchain_google_genai import ChatGoogleGenerativeAI
 import faiss
 from sentence_transformers import SentenceTransformer
