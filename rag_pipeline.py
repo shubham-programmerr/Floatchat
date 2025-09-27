@@ -1,4 +1,4 @@
-# rag_pipeline.py (Final Version)
+# rag_pipeline.py
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
@@ -13,8 +13,9 @@ DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 
 # --- Initialize Models and Database Connection ---
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", google_api_key=GEMINI_API_KEY)
+llm = ChatGoogleGenerativeAI(model="gemini-1.0-pro", google_api_key=GEMINI_API_KEY)
 db_engine = create_engine(DB_CONNECTION_STRING)
+
 
 @st.cache_resource
 def get_retriever_model():
@@ -25,13 +26,12 @@ retriever_model = get_retriever_model()
 # --- Build the In-Memory FAISS Vector Store ---
 metadata_docs = [
     "Table 'argo_profiles' contains oceanographic data from ARGO floats.",
+    "Column 'n_prof' is the unique identifier for each profile (measurement cycle).",
     "Column 'latitude' and 'longitude' are the float's coordinates.",
     "Column 'timestamp' is the date and time of the measurement.",
     "Column 'pressure' corresponds to depth in decibars.",
     "Column 'temperature' is the water temperature in degrees Celsius.",
-    "Column 'salinity' is the practical salinity of the water.",
-    "Column 'doxy_adjusted' is the dissolved oxygen level.",
-    "Column 'chla_adjusted' is the Chlorophyll-a concentration."
+    "Column 'salinity' is the practical salinity of the water."
 ]
 doc_embeddings = retriever_model.encode(metadata_docs)
 index = faiss.IndexFlatL2(doc_embeddings.shape[1])
@@ -45,10 +45,10 @@ def get_sql_from_question(question: str) -> str:
 
     template = """
     You are an expert PostgreSQL and PostGIS data scientist. Given the table schema and context, write a single, valid SQL query to answer the user's question.
-    The current date is {current_date}. Output ONLY the SQL query.
+    The current date is {current_date}. Output ONLY the SQL query. Do not add any explanation or markdown formatting.
 
     ### Schema:
-    CREATE TABLE argo_profiles (n_prof INTEGER, latitude FLOAT, longitude FLOAT, timestamp TIMESTAMP, pressure FLOAT, temperature FLOAT, salinity FLOAT, doxy_adjusted FLOAT, chla_adjusted FLOAT, geometry GEOMETRY(Point, 4326));
+    CREATE TABLE argo_profiles (n_prof INTEGER, latitude FLOAT, longitude FLOAT, timestamp TIMESTAMP, pressure FLOAT, temperature FLOAT, salinity FLOAT, geometry GEOMETRY(Point, 4326));
 
     ### Context:
     {context}
@@ -79,7 +79,7 @@ def get_sql_from_question(question: str) -> str:
     return sql_query.strip()
 
 def execute_query(sql: str):
-    """Executes the SQL query and returns a DataFrame and error message."""
+    """Executes the SQL query and returns a DataFrame and an error message."""
     try:
         return pd.read_sql_query(sql, db_engine), None
     except Exception as e:
