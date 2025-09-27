@@ -1,4 +1,4 @@
-# rag_pipeline.py (Final Version)
+# rag_pipeline.py (Definitive Version with Stable Model)
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
@@ -10,10 +10,11 @@ import numpy as np
 
 # --- Configuration ---
 DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
-GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+GEMINI_API_KEY = st.secrets
 
 # --- Initialize Models and Database Connection ---
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", google_api_key=GEMINI_API_KEY)
+# Use the stable, universally available model name
+llm = ChatGoogleGenerativeAI(model="gemini-1.0-pro", google_api_key=GEMINI_API_KEY)
 db_engine = create_engine(DB_CONNECTION_STRING)
 
 @st.cache_resource
@@ -23,16 +24,7 @@ def get_retriever_model():
 retriever_model = get_retriever_model()
 
 # --- Build the In-Memory FAISS Vector Store ---
-metadata_docs = [
-    "Table 'argo_profiles' contains oceanographic data from ARGO floats.",
-    "Column 'latitude' and 'longitude' are the float's coordinates.",
-    "Column 'timestamp' is the date and time of the measurement.",
-    "Column 'pressure' corresponds to depth in decibars.",
-    "Column 'temperature' is the water temperature in degrees Celsius.",
-    "Column 'salinity' is the practical salinity of the water.",
-    "Column 'doxy_adjusted' is the dissolved oxygen level.",
-    "Column 'chla_adjusted' is the Chlorophyll-a concentration."
-]
+metadata_docs =
 doc_embeddings = retriever_model.encode(metadata_docs)
 index = faiss.IndexFlatL2(doc_embeddings.shape[1])
 index.add(doc_embeddings.astype('float32'))
@@ -41,7 +33,7 @@ def get_sql_from_question(question: str) -> str:
     """Generates and robustly cleans an SQL query from a natural language question."""
     question_embedding = retriever_model.encode([question])
     distances, indices = index.search(question_embedding.astype('float32'), k=3)
-    context = "\n".join([metadata_docs[i] for i in indices[0]])
+    context = "\n".join([metadata_docs[i] for i in indices])
 
     template = """
     You are an expert PostgreSQL and PostGIS data scientist. Given the table schema and context, write a single, valid SQL query to answer the user's question.
@@ -69,7 +61,7 @@ def get_sql_from_question(question: str) -> str:
     
     # Robustly find the start of the SQL command
     select_pos = sql_query.upper().find("SELECT")
-    if select_pos != -1:
+    if select_pos!= -1:
         sql_query = sql_query[select_pos:]
     
     # Remove trailing markdown backticks
