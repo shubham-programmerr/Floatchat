@@ -8,7 +8,6 @@ import faiss
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import re
-from google import generativeai as genai
 
 # ----------------------------------------------------
 # 1. Configuration
@@ -17,33 +16,20 @@ DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 
 # ----------------------------------------------------
-# 2. List available models (optional, for debugging)
-# ----------------------------------------------------
-genai.configure(api_key=GEMINI_API_KEY)
-
-try:
-    models = genai.list_models()
-    st.write("✅ Available Gemini models:")
-    for m in models:
-        st.write("-", m["name"])
-except Exception as e:
-    st.warning(f"Could not fetch models: {e}")
-
-# ----------------------------------------------------
-# 3. Initialize LangChain LLM (pick a model from available list)
+# 2. Initialize LangChain LLM (v1 API)
 # ----------------------------------------------------
 llm = ChatGoogleGenerativeAI(
-    model="gemini-1.5-turbo",   # <-- replace with one from the list above
+    model="gemini-1.5-turbo",   # stable v1 API model
     google_api_key=GEMINI_API_KEY
 )
 
 # ----------------------------------------------------
-# 4. Initialize Database
+# 3. Initialize Database
 # ----------------------------------------------------
 db_engine = create_engine(DB_CONNECTION_STRING)
 
 # ----------------------------------------------------
-# 5. Initialize FAISS retriever
+# 4. Initialize FAISS retriever
 # ----------------------------------------------------
 @st.cache_resource
 def get_retriever_model():
@@ -66,7 +52,7 @@ index = faiss.IndexFlatL2(doc_embeddings.shape[1])
 index.add(doc_embeddings.astype('float32'))
 
 # ----------------------------------------------------
-# 6. Generate SQL from natural language
+# 5. Generate SQL from natural language
 # ----------------------------------------------------
 def get_sql_from_question(question: str) -> str:
     """Generates a cleaned SQL query from a natural language question."""
@@ -123,7 +109,7 @@ def get_sql_from_question(question: str) -> str:
     return sql_query.strip()
 
 # ----------------------------------------------------
-# 7. Execute SQL safely
+# 6. Execute SQL safely
 # ----------------------------------------------------
 def execute_query(sql: str):
     """Executes the SQL query and returns a DataFrame or an error message."""
