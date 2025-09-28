@@ -8,7 +8,7 @@ pandas
 xarray
 netcdf4
 dask
-pyarray
+pyarrow
 toml
 
 # --- Database & Geospatial ---
