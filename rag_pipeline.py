@@ -12,7 +12,7 @@ DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 
 # --- Initialize Models and Database Connection ---
-llm = ChatGoogleGenerativeAI(model="gemini-1.0-pro", google_api_key=GEMINI_API_KEY)
+llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=GEMINI_API_KEY)
 db_engine = create_engine(DB_CONNECTION_STRING)
 
 @st.cache_resource
