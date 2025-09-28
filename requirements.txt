@@ -1,3 +1,5 @@
+# requirements.txt
+
 # --- Frontend ---
 streamlit
 
@@ -11,15 +13,14 @@ toml
 
 # --- Database & Geospatial ---
 sqlalchemy
-psycopg2-binary
+ps psycopg2-binary
 geopandas
 geoalchemy2
 
 # --- AI & Language Model ---
-langchain>=0.2.5
-langchain-core>=0.2.7
-langchain-google-genai>=0.1.6
-google-generativeai>=0.16.0
+langchain==0.2.5
+langchain-core==0.2.7
+langchain-google-genai==1.0.2  # CORRECTED: Downgraded for compatibility
 sentence-transformers
 faiss-cpu
 tiktoken
