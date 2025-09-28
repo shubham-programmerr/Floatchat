@@ -1,24 +1,29 @@
-# rag_pipeline.py
+# rag_pipeline.py (Updated with Caching and Timeout)
 import streamlit as st
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 import faiss
 from sentence_transformers import SentenceTransformer
 import numpy as np
+import re
 
 # --- Configuration ---
 DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 
 # --- Initialize Models and Database Connection ---
-# ✅ Switch model to gemini-1.5-flash (widely available & stable)
 llm = ChatGoogleGenerativeAI(
     model="gemini-1.5-flash",
     google_api_key=GEMINI_API_KEY
 )
-db_engine = create_engine(DB_CONNECTION_STRING)
+
+# UPDATED: Added a 15-second statement timeout to the database connection
+db_engine = create_engine(
+    DB_CONNECTION_STRING,
+    connect_args={"options": "-c statement_timeout=15000"}
+)
 
 @st.cache_resource
 def get_retriever_model():
@@ -40,6 +45,9 @@ doc_embeddings = retriever_model.encode(metadata_docs)
 index = faiss.IndexFlatL2(doc_embeddings.shape[1])
 index.add(doc_embeddings.astype('float32'))
 
+# --- Generate SQL from Natural Language ---
+# UPDATED: Added caching to prevent redundant API calls for the same question
+@st.cache_data
 def get_sql_from_question(question: str) -> str:
     """Generates and robustly cleans an SQL query from a natural language question."""
     question_embedding = retriever_model.encode([question])
@@ -47,11 +55,25 @@ def get_sql_from_question(question: str) -> str:
     context = "\n".join([metadata_docs[i] for i in indices[0]])
 
     template = """
-    You are an expert PostgreSQL and PostGIS data scientist. Given the table schema and context, write a single, valid SQL query to answer the user's question.
-    The current date is {current_date}. Output ONLY the SQL query. Do not add any explanation or markdown formatting.
+    You are an expert PostgreSQL and PostGIS data scientist. 
+    Given the table schema and context, write a single, valid SQL query to answer the user's question.
+    - Do not include markdown, code fences, or explanations.
+    - Only output the SQL query.
+    - Use table and column names exactly as defined.
+
+    The current date is {current_date}.
 
     ### Schema:
-    CREATE TABLE argo_profiles (n_prof INTEGER, latitude FLOAT, longitude FLOAT, timestamp TIMESTAMP, pressure FLOAT, temperature FLOAT, salinity FLOAT, geometry GEOMETRY(Point, 4326));
+    CREATE TABLE argo_profiles (
+        n_prof INTEGER, 
+        latitude FLOAT, 
+        longitude FLOAT, 
+        timestamp TIMESTAMP, 
+        pressure FLOAT, 
+        temperature FLOAT, 
+        salinity FLOAT, 
+        geometry GEOMETRY(Point, 4326)
+    );
 
     ### Context:
     {context}
@@ -69,20 +91,24 @@ def get_sql_from_question(question: str) -> str:
     
     response = llm.invoke(prompt)
     sql_query = response.content.strip()
-    
-    # --- Clean up the output in case LLM adds markdown or text ---
+
+    # --- Clean up the output ---
+    sql_query = re.sub(r"```sql|```", "", sql_query, flags=re.IGNORECASE).strip()
+
     select_pos = sql_query.upper().find("SELECT")
     if select_pos != -1:
         sql_query = sql_query[select_pos:]
-    
-    if sql_query.endswith("```"):
-        sql_query = sql_query[:-3]
         
     return sql_query.strip()
 
+# --- Execute SQL Safely ---
 def execute_query(sql: str):
     """Executes the SQL query and returns a DataFrame and an error message."""
+    if not sql.strip().upper().startswith("SELECT"):
+        return None, "❌ Only SELECT queries are allowed for safety."
+
     try:
-        return pd.read_sql_query(sql, db_engine), None
+        with db_engine.connect() as conn:
+            return pd.read_sql_query(text(sql), conn), None
     except Exception as e:
         return None, str(e)
