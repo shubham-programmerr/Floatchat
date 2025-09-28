@@ -1,7 +1,8 @@
+# rag_pipeline.py
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
-from langchain_core.prompts import PromptTemplate # THIS LINE IS CRITICAL
+from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 import faiss
 from sentence_transformers import SentenceTransformer
@@ -12,7 +13,11 @@ DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 
 # --- Initialize Models and Database Connection ---
-llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=GEMINI_API_KEY)
+# ✅ Switch model to gemini-1.5-flash (widely available & stable)
+llm = ChatGoogleGenerativeAI(
+    model="gemini-1.5-flash",
+    google_api_key=GEMINI_API_KEY
+)
 db_engine = create_engine(DB_CONNECTION_STRING)
 
 @st.cache_resource
@@ -65,12 +70,11 @@ def get_sql_from_question(question: str) -> str:
     response = llm.invoke(prompt)
     sql_query = response.content.strip()
     
-    # Robustly find the start of the SQL command
+    # --- Clean up the output in case LLM adds markdown or text ---
     select_pos = sql_query.upper().find("SELECT")
     if select_pos != -1:
         sql_query = sql_query[select_pos:]
     
-    # Remove trailing markdown backticks
     if sql_query.endswith("```"):
         sql_query = sql_query[:-3]
         
