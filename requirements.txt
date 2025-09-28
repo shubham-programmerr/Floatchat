@@ -1,17 +1,28 @@
-# requirements.txt
+# --- Frontend ---
 streamlit
+
+# --- Data Processing ---
 pandas
 xarray
 netcdf4
 dask
 pyarrow
+toml
+
+# --- Database & Geospatial ---
 sqlalchemy
 psycopg2-binary
 geopandas
-langchain
-langchain-google-genai
-sentence-transformers
-tiktoken
-plotly
 geoalchemy2
+
+# --- AI & Language Model ---
+langchain>=0.2.5
+langchain-core>=0.2.7
+langchain-google-genai>=0.1.6
+google-generativeai>=0.16.0
+sentence-transformers
 faiss-cpu
+tiktoken
+
+# --- Visualization ---
+plotly
