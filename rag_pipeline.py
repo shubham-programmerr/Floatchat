@@ -9,24 +9,15 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import re
 
-# ----------------------------------------------------
-# 1. Configuration
-# ----------------------------------------------------
+# --- Configuration ---
 DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
-GROQ_API_KEY = st.secrets["GROQ_API_KEY"] # New secret name
+GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 llm = ChatGroq(
-    model="llama-3.1-8b-instant", # Using a Llama 3 model on Groq
+    model="llama3-70b-8192", # Correct model
     groq_api_key=GROQ_API_KEY
 )
-
-# ----------------------------------------------------
-# 3. Initialize Database
-# ----------------------------------------------------
 db_engine = create_engine(DB_CONNECTION_STRING)
 
-# ----------------------------------------------------
-# 4. Initialize FAISS retriever
-# ----------------------------------------------------
 @st.cache_resource
 def get_retriever_model():
     return SentenceTransformer('all-MiniLM-L6-v2')
@@ -37,28 +28,26 @@ metadata_docs = [
     "Table 'argo_profiles' contains oceanographic data from ARGO floats.",
     "Column 'n_prof' is the unique identifier for each profile (measurement cycle).",
     "Column 'latitude' and 'longitude' are the float's coordinates.",
-    "Column 'timestamp' is the date and time of the measurement.",
-    "Column 'pressure' corresponds to depth in decibars.",
+    "Column 'timestamp' is the date and time of the measurement. Higher timestamp values are more recent.",
+    "Column 'pressure' corresponds to depth in decibars; higher pressure values mean deeper in the ocean.",
     "Column 'temperature' is the water temperature in degrees Celsius.",
     "Column 'salinity' is the practical salinity of the water."
 ]
-
 doc_embeddings = retriever_model.encode(metadata_docs)
 index = faiss.IndexFlatL2(doc_embeddings.shape[1])
 index.add(doc_embeddings.astype('float32'))
 
-# ----------------------------------------------------
-# 5. Generate SQL from natural language
-# ----------------------------------------------------
+
 def get_sql_from_question(question: str) -> str:
     """Generates a cleaned SQL query from a natural language question."""
     question_embedding = retriever_model.encode([question])
     distances, indices = index.search(question_embedding.astype('float32'), k=3)
     context = "\n".join([metadata_docs[i] for i in indices[0]])
 
+    # --- UPDATED: Added a new "Examples" section to the template ---
     template = """
     You are an expert PostgreSQL and PostGIS data scientist. 
-    Given the table schema and context, write a single, valid SQL query to answer the user's question.
+    Given the table schema, context, and examples, write a single, valid SQL query to answer the user's question.
     - Only output the SQL query. No markdown or explanations.
     - Use table and column names exactly as defined.
 
@@ -79,6 +68,10 @@ def get_sql_from_question(question: str) -> str:
     ### Context:
     {context}
 
+    ### Examples:
+    User Question: "Show me the data for the most recent profile."
+    SQL Query: SELECT * FROM argo_profiles ORDER BY timestamp DESC LIMIT 1;
+
     ### User Question:
     {question}
 
@@ -90,23 +83,21 @@ def get_sql_from_question(question: str) -> str:
         question=question
     )
     
-    # Call the LLM
+    # REMOVED: The debugging print statement is no longer needed.
+    # print(f"--- PROMPT SENT TO GROQ ---\n{prompt}\n--------------------------")
+    
     response = llm.invoke(prompt)
     sql_query = response.content.strip()
 
-    # Remove any markdown code fences
     sql_query = re.sub(r"```sql|```", "", sql_query, flags=re.IGNORECASE).strip()
 
-    # Ensure query starts with SELECT
     select_pos = sql_query.upper().find("SELECT")
     if select_pos != -1:
         sql_query = sql_query[select_pos:]
 
     return sql_query.strip()
 
-# ----------------------------------------------------
-# 6. Execute SQL safely
-# ----------------------------------------------------
+
 def execute_query(sql: str):
     """Executes the SQL query and returns a DataFrame or an error message."""
     if not sql.strip().upper().startswith("SELECT"):
@@ -117,3 +108,4 @@ def execute_query(sql: str):
             return pd.read_sql_query(text(sql), conn), None
     except Exception as e:
         return None, str(e)
+
