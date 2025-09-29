@@ -15,7 +15,7 @@ import re
 DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"] # New secret name
 llm = ChatGroq(
-    model="llama3-8b-8192", # Using a Llama 3 model on Groq
+    model="lama3-70b-8192", # Using a Llama 3 model on Groq
     groq_api_key=GROQ_API_KEY
 )
 
@@ -90,10 +90,6 @@ def get_sql_from_question(question: str) -> str:
         question=question
     )
     
-    # --- EDITED CODE: ADDED FOR DEBUGGING ---
-    # This will print the exact prompt to your logs to help debug the BadRequestError
-    print(f"--- PROMPT SENT TO GROQ ---\n{prompt}\n--------------------------")
-
     # Call the LLM
     response = llm.invoke(prompt)
     sql_query = response.content.strip()
