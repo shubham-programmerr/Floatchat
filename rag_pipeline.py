@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
 from langchain_core.prompts import PromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 import faiss
 from sentence_transformers import SentenceTransformer
 import numpy as np
@@ -13,14 +13,10 @@ import re
 # 1. Configuration
 # ----------------------------------------------------
 DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
-GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-
-# ----------------------------------------------------
-# 2. Initialize LangChain LLM (v1 API)
-# ----------------------------------------------------
-llm = ChatGoogleGenerativeAI(
-    model="gemini-1.5-turbo",   # stable v1 API model
-    google_api_key=GEMINI_API_KEY
+GROQ_API_KEY = st.secrets["GROQ_API_KEY"] # New secret name
+llm = ChatGroq(
+    model="llama3-8b-8192", # Using a Llama 3 model on Groq
+    groq_api_key=GROQ_API_KEY
 )
 
 # ----------------------------------------------------

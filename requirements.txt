@@ -18,9 +18,9 @@ geopandas
 geoalchemy2
 
 # --- AI & Language Model ---
-langchain==0.2.5
-langchain-core==0.2.7
-langchain-google-genai==1.0.2
+langchain
+langchain-core
+langchain-google-genai
 sentence-transformers
 faiss-cpu
 tiktoken
