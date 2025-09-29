@@ -55,7 +55,7 @@ def process_user_question(question: str) -> dict:
 
     1.  **sql_query**: Write a single, valid PostgreSQL query to answer the user's question.
     2.  **visualization_types**: A list of strings specifying what to visualize.
-        - If the user asks to "plot", "chart", or "visualize" data like temperature vs. pressure, include "plot".
+        - If the user asks to "plot", "chart", "visualize", or "show" data with two or more numerical variables (like temperature and pressure), include "plot".
         - If the user asks to "map" or see a "path" or "trajectory", include "map".
         - If the user only asks for data without a visual request, the list should be empty, like [].
 
@@ -77,7 +77,7 @@ def process_user_question(question: str) -> dict:
     {context}
     
     ### Examples:
-    User Question: "Plot the temperature vs pressure for the most recent 5 profiles."
+    User Question: "Show me the temperature vs pressure for the most recent 5 profiles."
     Your Response:
     {{
         "sql_query": "SELECT n_prof, temperature, pressure FROM argo_profiles ORDER BY timestamp DESC, n_prof DESC LIMIT 5;",
