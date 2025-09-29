@@ -2,6 +2,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import numpy as np  # ADDED THIS LINE TO FIX THE NAMERROR
 from rag_pipeline import process_user_question, execute_query
 
 # --- Page Configuration ---
@@ -42,6 +43,7 @@ st.markdown("""
     }
     [data-testid="stButton"] button:hover {
         background-color: #dddddd; border-color: #dddddd;
+        
     }
 </style>
 """, unsafe_allow_html=True)
@@ -173,3 +175,4 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
+
