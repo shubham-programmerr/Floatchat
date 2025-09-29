@@ -8,12 +8,11 @@ import faiss
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import re
+import json
 
 # --- Configuration ---
 DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-
-# --- UPDATED: Changed the model to the new Llama 3.1 Instant ---
 llm = ChatGroq(
     model="llama-3.1-8b-instant", 
     groq_api_key=GROQ_API_KEY
@@ -26,6 +25,7 @@ def get_retriever_model():
 
 retriever_model = get_retriever_model()
 
+# --- FAISS Vector Store (Unchanged) ---
 metadata_docs = [
     "Table 'argo_profiles' contains oceanographic data from ARGO floats.",
     "Column 'n_prof' is the unique identifier for each profile (measurement cycle).",
@@ -39,44 +39,44 @@ doc_embeddings = retriever_model.encode(metadata_docs)
 index = faiss.IndexFlatL2(doc_embeddings.shape[1])
 index.add(doc_embeddings.astype('float32'))
 
-
-def get_sql_from_question(question: str) -> str:
-    """Generates a cleaned SQL query from a natural language question."""
+# --- UPDATED: This function now processes the user's intent, not just SQL ---
+def process_user_question(question: str) -> dict:
+    """
+    Analyzes the user's question to generate SQL and determine if a visualization is requested.
+    Returns a dictionary with 'sql_query' and 'visualization_requested' keys.
+    """
     question_embedding = retriever_model.encode([question])
     distances, indices = index.search(question_embedding.astype('float32'), k=3)
     context = "\n".join([metadata_docs[i] for i in indices[0]])
 
+    # --- UPDATED: The prompt now asks for a JSON object with two outputs ---
     template = """
-    You are an expert PostgreSQL and PostGIS data scientist. 
-    Given the table schema, context, and examples, write a single, valid SQL query to answer the user's question.
-    - Only output the SQL query. No markdown or explanations.
-    - Use table and column names exactly as defined.
+    You are an expert PostgreSQL data scientist and a helpful assistant.
+    Your task is to analyze the user's question and generate a valid PostgreSQL query. You must also determine if the user's question implies a request for a visualization (like a graph, chart, or map).
 
-    The current date is {current_date}.
+    Respond with a single, valid JSON object with two keys:
+    1. "sql_query": A string containing the SQL query to answer the data part of the question.
+    2. "visualization_requested": A boolean value (true or false). This should be true only if the user explicitly uses words like "graph", "plot", "chart", "visualize", "map", etc.
+
+    - The JSON object must be the only thing you output. Do not add explanations or markdown.
 
     ### Schema:
-    CREATE TABLE argo_profiles (
-        n_prof INTEGER, 
-        latitude FLOAT, 
-        longitude FLOAT, 
-        timestamp TIMESTAMP, 
-        pressure FLOAT, 
-        temperature FLOAT, 
-        salinity FLOAT, 
-        geometry GEOMETRY(Point, 4326)
-    );
+    CREATE TABLE argo_profiles (n_prof INTEGER, latitude FLOAT, longitude FLOAT, timestamp TIMESTAMP, pressure FLOAT, temperature FLOAT, salinity FLOAT, geometry GEOMETRY(Point, 4326));
 
     ### Context:
     {context}
 
     ### Examples:
     User Question: "Show me the data for the most recent profile."
-    SQL Query: SELECT * FROM argo_profiles ORDER BY timestamp DESC LIMIT 1;
+    JSON Response: {{"sql_query": "SELECT * FROM argo_profiles ORDER BY timestamp DESC LIMIT 1;", "visualization_requested": false}}
+
+    User Question: "Can you plot the temperature against pressure for the first 5 profiles?"
+    JSON Response: {{"sql_query": "SELECT n_prof, temperature, pressure FROM argo_profiles WHERE n_prof <= 5;", "visualization_requested": true}}
 
     ### User Question:
     {question}
 
-    ### SQL Query:
+    ### JSON Response:
     """
     prompt = PromptTemplate.from_template(template).format(
         current_date=pd.to_datetime('today').strftime('%Y-%m-%d'),
@@ -85,15 +85,20 @@ def get_sql_from_question(question: str) -> str:
     )
     
     response = llm.invoke(prompt)
-    sql_query = response.content.strip()
+    response_text = response.content.strip()
 
-    sql_query = re.sub(r"```sql|```", "", sql_query, flags=re.IGNORECASE).strip()
-
-    select_pos = sql_query.upper().find("SELECT")
-    if select_pos != -1:
-        sql_query = sql_query[select_pos:]
-
-    return sql_query.strip()
+    # --- UPDATED: Clean and parse the JSON response from the AI ---
+    response_text = re.sub(r"```json|```", "", response_text, flags=re.IGNORECASE).strip()
+    
+    try:
+        result = json.loads(response_text)
+        # Clean the nested SQL query
+        if 'sql_query' in result and isinstance(result['sql_query'], str):
+            result['sql_query'] = re.sub(r"```sql|```", "", result['sql_query'], flags=re.IGNORECASE).strip()
+        return result
+    except (json.JSONDecodeError, TypeError):
+        # Fallback if the AI doesn't return valid JSON
+        return {"sql_query": "SELECT 'AI response error: Could not parse JSON';", "visualization_requested": False, "error": f"Failed to decode AI JSON response: {response_text}"}
 
 
 def execute_query(sql: str):
