@@ -1,13 +1,14 @@
-# app.py (Final Version with Visualization Toggle)
+# app.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+# CORRECTED: Import the new function name from the RAG pipeline
 from rag_pipeline import process_user_question, execute_query
 
 # --- Page Configuration ---
 st.set_page_config(page_title="FloatChat", layout="wide")
 st.title("FloatChat 🌊 - AI Interface for ARGO Ocean Data")
-st.caption("A Proof-of-Concept powered by Google Gemini")
+st.caption("A Proof-of-Concept powered by Groq and Llama 3.1")
 st.markdown("Data sourced from the Argo Program, including the [Indian Argo Project](https://incois.gov.in/OON/index.jsp).")
 
 # --- Main App Logic ---
@@ -28,14 +29,26 @@ if prompt := st.chat_input("Show the temperature and pressure for the first 10 p
 
     with st.chat_message("assistant"):
         with st.spinner("Analyzing your question and querying the database..."):
-            sql_query = get_sql_from_question(prompt)
+            # CORRECTED: Call the new function and handle its dictionary output
+            ai_response = process_user_question(prompt)
+            sql_query = ai_response.get("sql_query")
+            show_visuals = ai_response.get("visualization_requested", False)
+            ai_error = ai_response.get("error")
+
+            if ai_error:
+                st.error(f"An error occurred in the AI model: {ai_error}")
+            
+            if not sql_query:
+                st.error("The AI model did not return a SQL query.")
+                st.stop()
+
             st.markdown("##### 🔍 Generated SQL Query:")
             st.code(sql_query, language="sql")
             
-            result_df, error = execute_query(sql_query)
+            result_df, db_error = execute_query(sql_query)
             
-            if error:
-                st.error(f"An error occurred: {error}")
+            if db_error:
+                st.error(f"A database error occurred: {db_error}")
             else:
                 st.success("Query executed successfully!")
                 st.dataframe(result_df, use_container_width=True)
@@ -43,52 +56,40 @@ if prompt := st.chat_input("Show the temperature and pressure for the first 10 p
 
                 if not result_df.empty:
                     st.markdown("---")
-                    st.subheader("📊 Visualizations & Export")
                     
-                    # --- ADDED CHECKBOX FOR CONTROL ---
-                    show_visuals = st.checkbox("Show Visualizations", value=True)
-                    
-                    vis_col, export_col = st.columns([3, 1])
-                    
-                    # --- VISUALS ARE NOW INSIDE THIS 'IF' BLOCK ---
                     if show_visuals:
+                        st.subheader("📊 Visualizations & Export")
+                        vis_col, export_col = st.columns([3, 1])
+                        
                         with vis_col:
-                            # Condition to show the map
                             if 'latitude' in result_df.columns and 'longitude' in result_df.columns and result_df['latitude'].nunique() > 1:
                                 st.caption("Float Trajectory/Positions")
                                 st.map(result_df[['latitude', 'longitude']])
                             
-                            # Condition to show the comparison chart
                             if 'n_prof' in result_df.columns and result_df['n_prof'].nunique() > 1 and 'temperature' in result_df.columns and 'pressure' in result_df.columns:
                                 st.caption("Profile Comparison")
                                 fig = px.line(result_df, y='pressure', x='temperature', color='n_prof', title='Profile Comparison')
                                 fig.update_yaxes(autorange="reversed")
                                 st.plotly_chart(fig, use_container_width=True)
 
-                    with export_col:
-                        st.caption("Download Data")
-                        
-                        # CSV export
+                        with export_col:
+                            st.caption("Download Data")
+                            csv = result_df.to_csv(index=False).encode('utf-8')
+                            st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='csv')
+                            
+                            required_cols = {'n_prof', 'pressure'}
+                            if required_cols.issubset(result_df.columns):
+                                try:
+                                    df_for_export = result_df.drop(columns=['geometry'], errors='ignore')
+                                    df_indexed = df_for_export.set_index(['n_prof', 'pressure'])
+                                    ds_export = df_indexed.to_xarray()
+                                    netcdf_bytes = ds_export.to_netcdf()
+                                    st.download_button("Download as NetCDF", netcdf_bytes, "argo_data.nc", "application/x-netcdf", key='netcdf')
+                                except Exception as e:
+                                    st.error(f"Failed to generate NetCDF file: {e}")
+                            else:
+                                st.warning("NetCDF export requires 'n_prof' and 'pressure' columns.")
+                    else:
+                        st.subheader("📊 Export")
                         csv = result_df.to_csv(index=False).encode('utf-8')
-                        st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='csv')
-                        
-                        # NetCDF export
-                        required_cols = {'n_prof', 'pressure'}
-                        if required_cols.issubset(result_df.columns):
-                            try:
-                                df_for_export = result_df.drop(columns=['geometry'], errors='ignore')
-                                df_indexed = df_for_export.set_index(['n_prof', 'pressure'])
-                                ds_export = df_indexed.to_xarray()
-                                netcdf_bytes = ds_export.to_netcdf()
-                                
-                                st.download_button(
-                                    "Download as NetCDF", 
-                                    netcdf_bytes, 
-                                    "argo_data.nc", 
-                                    "application/x-netcdf", 
-                                    key='netcdf'
-                                )
-                            except Exception as e:
-                                st.error(f"Failed to generate NetCDF file: {e}")
-                        else:
-                            st.warning("NetCDF export requires 'n_prof' and 'pressure' columns.")
+                        st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv')
