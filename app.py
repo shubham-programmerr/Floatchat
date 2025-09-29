@@ -6,7 +6,7 @@ from rag_pipeline import process_user_question, execute_query
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="FloatChat",
+    page_title="ProCode FloatChat",
     page_icon="🌊",
     layout="wide"
 )
@@ -14,28 +14,35 @@ st.set_page_config(
 # --- Custom CSS for a better UI ---
 st.markdown("""
 <style>
-    /* Main app styling */
+    /* Main app styling for dark theme */
     .stApp {
-        background-color: #f0f2f6;
+        background-color: #0e1117;
+        color: #fafafa;
+    }
+    /* Ensure title is visible */
+    h1, h2, h3, h4, h5, h6 {
+        color: #fafafa;
     }
     /* Chat bubble styling */
     .st-chat-message-container {
         border-radius: 0.5rem;
         padding: 1rem;
         margin-bottom: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     /* Assistant message styling */
     [data-testid="stChatMessage"][data-testid="stChatMessageContent"] {
-        background-color: #ffffff;
+        background-color: #262730;
+        color: #fafafa;
     }
     /* User message styling */
     [data-testid="stChatMessage"]:has([data-testid="stChatMessageContentUser"]) {
-        background-color: #d0e0f0;
+        background-color: #1c3346;
+        color: #fafafa;
     }
     /* Expander styling */
     .st-expander {
-        border: 1px solid #e0e0e0;
+        border: 1px solid #31333F;
         border-radius: 0.5rem;
     }
 </style>
