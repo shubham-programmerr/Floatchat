@@ -14,60 +14,60 @@ st.set_page_config(
 # --- Custom CSS for a better UI ---
 st.markdown("""
 <style>
-    /* Main app styling for a water-like light blue/white theme */
+    /* Main app styling for a black and white theme */
     .stApp {
-        background-color: #e6f7ff; /* Very Light Blue */
-        color: #0c2d48; /* Dark Blue Text for readability */
+        background-color: #121212; /* Dark background */
+        color: #ffffff; /* White text */
     }
     /* Ensure title is visible */
     h1, h2, h3, h4, h5, h6 {
-        color: #0c2d48; /* Dark Blue Text */
+        color: #ffffff; /* White text */
     }
     /* Chat bubble styling */
     .st-chat-message-container {
         border-radius: 0.75rem;
         padding: 1rem;
         margin-bottom: 1rem;
-        border: 1px solid #cceeff;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border: 1px solid #333333; /* Grey border */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     /* Assistant message styling */
     [data-testid="stChatMessage"][data-testid="stChatMessageContent"] {
-        background-color: #ffffff; /* White */
-        color: #0c2d48; /* Dark Blue Text */
+        background-color: #222222; /* Dark grey */
+        color: #ffffff; /* White text */
     }
     /* User message styling */
     [data-testid="stChatMessage"]:has([data-testid="stChatMessageContentUser"]) {
-        background-color: #cceeff; /* Light Sky Blue */
-        color: #0c2d48; /* Dark Blue Text */
+        background-color: #333333; /* Slightly lighter grey */
+        color: #ffffff; /* White text */
     }
     /* Expander styling */
     .st-expander {
-        border: 1px solid #b3e0ff; /* Light blue border */
+        border: 1px solid #444444; /* Grey border */
         border-radius: 0.5rem;
     }
     /* Style the header and footer to match the background */
     [data-testid="stHeader"] {
-        background-color: #e6f7ff;
+        background-color: #121212;
     }
     [data-testid="stChatInputContainer"] {
-        background-color: #e6f7ff;
-        border-top: 1px solid #b3e0ff;
+        background-color: #121212;
+        border-top: 1px solid #333333;
     }
     /* Ensure chat input text is visible */
     [data-testid="stChatInput"] {
-        color: #0c2d48;
+        color: #ffffff;
     }
     /* Sidebar button styling for visibility */
     [data-testid="stButton"] button {
-        background-color: #0c2d48; /* Dark Blue */
-        color: #ffffff; /* White Text */
-        border: 1px solid #0c2d48;
+        background-color: #ffffff; /* White button */
+        color: #121212; /* Black text */
+        border: 1px solid #ffffff;
         border-radius: 0.5rem;
     }
     [data-testid="stButton"] button:hover {
-        background-color: #1a3a5a;
-        border-color: #1a3a5a;
+        background-color: #dddddd; /* Light grey on hover */
+        border-color: #dddddd;
     }
 </style>
 """, unsafe_allow_html=True)
