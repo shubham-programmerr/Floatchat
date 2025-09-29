@@ -46,6 +46,18 @@ st.markdown("""
         border: 1px solid #b3e0ff; /* Light blue border */
         border-radius: 0.5rem;
     }
+    /* Style the header and footer to match the background */
+    [data-testid="stHeader"] {
+        background-color: #e6f7ff;
+    }
+    [data-testid="stChatInputContainer"] {
+        background-color: #e6f7ff;
+        border-top: 1px solid #b3e0ff;
+    }
+    /* Ensure chat input text is visible */
+    [data-testid="stChatInput"] {
+        color: #0c2d48;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -165,5 +177,3 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
-
-
