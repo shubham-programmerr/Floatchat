@@ -20,7 +20,7 @@ geoalchemy2
 # --- AI & Language Model ---
 langchain
 langchain-core
-langchain-google-genai
+langchain-groq
 sentence-transformers
 faiss-cpu
 tiktoken
