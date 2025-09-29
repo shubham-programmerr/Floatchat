@@ -14,35 +14,36 @@ st.set_page_config(
 # --- Custom CSS for a better UI ---
 st.markdown("""
 <style>
-    /* Main app styling for a light blue/white theme */
+    /* Main app styling for a water-like light blue/white theme */
     .stApp {
-        background-color: #f0f8ff; /* Alice Blue */
-        color: #262730; /* Dark text for readability */
+        background-color: #e6f7ff; /* Very Light Blue */
+        color: #0c2d48; /* Dark Blue Text for readability */
     }
     /* Ensure title is visible */
     h1, h2, h3, h4, h5, h6 {
-        color: #262730; /* Dark text */
+        color: #0c2d48; /* Dark Blue Text */
     }
     /* Chat bubble styling */
     .st-chat-message-container {
-        border-radius: 0.5rem;
+        border-radius: 0.75rem;
         padding: 1rem;
         margin-bottom: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border: 1px solid #cceeff;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
     /* Assistant message styling */
     [data-testid="stChatMessage"][data-testid="stChatMessageContent"] {
         background-color: #ffffff; /* White */
-        color: #262730; /* Dark text */
+        color: #0c2d48; /* Dark Blue Text */
     }
     /* User message styling */
     [data-testid="stChatMessage"]:has([data-testid="stChatMessageContentUser"]) {
-        background-color: #e0f0ff; /* Light Blue */
-        color: #262730; /* Dark text */
+        background-color: #cceeff; /* Light Sky Blue */
+        color: #0c2d48; /* Dark Blue Text */
     }
     /* Expander styling */
     .st-expander {
-        border: 1px solid #d0d0d0; /* Light gray border */
+        border: 1px solid #b3e0ff; /* Light blue border */
         border-radius: 0.5rem;
     }
 </style>
@@ -164,4 +165,5 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
+
 
