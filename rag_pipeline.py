@@ -12,8 +12,10 @@ import re
 # --- Configuration ---
 DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+
+# --- UPDATED: Changed the model to the new Llama 3.1 Instant ---
 llm = ChatGroq(
-    model="llama3-70b-8192", # Correct model
+    model="llama-3.1-8b-instant", 
     groq_api_key=GROQ_API_KEY
 )
 db_engine = create_engine(DB_CONNECTION_STRING)
@@ -44,7 +46,6 @@ def get_sql_from_question(question: str) -> str:
     distances, indices = index.search(question_embedding.astype('float32'), k=3)
     context = "\n".join([metadata_docs[i] for i in indices[0]])
 
-    # --- UPDATED: Added a new "Examples" section to the template ---
     template = """
     You are an expert PostgreSQL and PostGIS data scientist. 
     Given the table schema, context, and examples, write a single, valid SQL query to answer the user's question.
@@ -83,9 +84,6 @@ def get_sql_from_question(question: str) -> str:
         question=question
     )
     
-    # REMOVED: The debugging print statement is no longer needed.
-    # print(f"--- PROMPT SENT TO GROQ ---\n{prompt}\n--------------------------")
-    
     response = llm.invoke(prompt)
     sql_query = response.content.strip()
 
@@ -108,4 +106,3 @@ def execute_query(sql: str):
             return pd.read_sql_query(text(sql), conn), None
     except Exception as e:
         return None, str(e)
-
