@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from rag_pipeline import get_sql_from_question, execute_query
+from rag_pipeline import process_user_question, execute_query
 
 # --- Page Configuration ---
 st.set_page_config(page_title="FloatChat", layout="wide")
