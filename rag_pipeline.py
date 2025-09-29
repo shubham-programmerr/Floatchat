@@ -15,7 +15,7 @@ import re
 DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"] # New secret name
 llm = ChatGroq(
-    model="lama3-70b-8192", # Using a Llama 3 model on Groq
+    model="llama3-70b-8192", # Using a Llama 3 model on Groq
     groq_api_key=GROQ_API_KEY
 )
 
