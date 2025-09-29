@@ -14,35 +14,35 @@ st.set_page_config(
 # --- Custom CSS for a better UI ---
 st.markdown("""
 <style>
-    /* Main app styling for a blue/black theme */
+    /* Main app styling for a light blue/white theme */
     .stApp {
-        background-color: #0a192f; /* Dark Navy Blue */
-        color: #fafafa;
+        background-color: #f0f8ff; /* Alice Blue */
+        color: #262730; /* Dark text for readability */
     }
     /* Ensure title is visible */
     h1, h2, h3, h4, h5, h6 {
-        color: #fafafa;
+        color: #262730; /* Dark text */
     }
     /* Chat bubble styling */
     .st-chat-message-container {
         border-radius: 0.5rem;
         padding: 1rem;
         margin-bottom: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     /* Assistant message styling */
     [data-testid="stChatMessage"][data-testid="stChatMessageContent"] {
-        background-color: #112240; /* Lighter Navy */
-        color: #fafafa;
+        background-color: #ffffff; /* White */
+        color: #262730; /* Dark text */
     }
     /* User message styling */
     [data-testid="stChatMessage"]:has([data-testid="stChatMessageContentUser"]) {
-        background-color: #233554; /* Slate Blue */
-        color: #fafafa;
+        background-color: #e0f0ff; /* Light Blue */
+        color: #262730; /* Dark text */
     }
     /* Expander styling */
     .st-expander {
-        border: 1px solid #303C55; /* Border color to match */
+        border: 1px solid #d0d0d0; /* Light gray border */
         border-radius: 0.5rem;
     }
 </style>
@@ -164,3 +164,4 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
+
