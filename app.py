@@ -6,7 +6,7 @@ from rag_pipeline import process_user_question, execute_query
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="FloatChat",
+    page_title="ProCode-FloatChat",
     page_icon="🌊",
     layout="wide"
 )
