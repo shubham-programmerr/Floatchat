@@ -13,14 +13,14 @@ toml
 
 # --- Database & Geospatial ---
 sqlalchemy
-ps psycopg2-binary
+psycopg2-binary
 geopandas
 geoalchemy2
 
 # --- AI & Language Model ---
 langchain==0.2.5
 langchain-core==0.2.7
-langchain-google-genai==1.0.2  # CORRECTED: Downgraded for compatibility
+langchain-google-genai==1.0.2
 sentence-transformers
 faiss-cpu
 tiktoken
