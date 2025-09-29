@@ -90,6 +90,10 @@ def get_sql_from_question(question: str) -> str:
         question=question
     )
     
+    # --- EDITED CODE: ADDED FOR DEBUGGING ---
+    # This will print the exact prompt to your logs to help debug the BadRequestError
+    print(f"--- PROMPT SENT TO GROQ ---\n{prompt}\n--------------------------")
+
     # Call the LLM
     response = llm.invoke(prompt)
     sql_query = response.content.strip()
