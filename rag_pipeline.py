@@ -51,8 +51,8 @@ def process_user_question(_question: str) -> dict:
     GENERAL RULES:
     1.  **sql_query**: Write a single, valid PostgreSQL query.
     2.  **visualization_types**: A list of strings: ["plot"], ["map"], or [].
-    3.  **Prioritize User Numbers**: Always use the specific profile numbers or ranges the user provides. For "profiles 10 and 20", use `WHERE n_prof IN (10, 20)`. For "profiles 10 to 20", use `WHERE n_prof BETWEEN 10 AND 20`.
-    4.  **Default Plotting**: If a user asks for a plot but does NOT specify a profile number (e.g., "plot temperature vs pressure"), generate a query for the first 50 measurements (`LIMIT 50`).
+    3.  **CRITICAL RULE: Only include "plot" in visualization_types if the user explicitly asks for a "plot", "graph", "chart", or "visualize". Simple "show" or "what is" questions should NOT generate a plot.**
+    4.  **Prioritize User Numbers**: Always use the specific profile numbers or ranges the user provides. For "profiles 10 and 20", use `WHERE n_prof IN (10, 20)`. For "profiles 10 to 20", use `WHERE n_prof BETWEEN 10 AND 20`.
     5.  **Multi-Profile Plotting**: If a plot involves multiple profiles, you MUST include the `n_prof` column in the SELECT statement.
     6.  **JSON Only**: Return ONLY the JSON object, with no other text.
 
@@ -64,24 +64,24 @@ def process_user_question(_question: str) -> dict:
     
     ### Few-Shot Examples:
 
+    User Question: "Show the temperature for profiles 1 to 5."
+    JSON Response:
+    {{
+        "sql_query": "SELECT n_prof, temperature FROM argo_profiles WHERE n_prof BETWEEN 1 AND 5;",
+        "visualization_types": []
+    }}
+
+    User Question: "Map the path of the float for the first 10 profiles."
+    JSON Response:
+    {{
+        "sql_query": "SELECT latitude, longitude FROM argo_profiles WHERE n_prof <= 10;",
+        "visualization_types": ["map"]
+    }}
+
     User Question: "Plot the salinity vs pressure for profiles 1 through 5."
     JSON Response:
     {{
         "sql_query": "SELECT n_prof, salinity, pressure FROM argo_profiles WHERE n_prof BETWEEN 1 AND 5;",
-        "visualization_types": ["plot"]
-    }}
-
-    User Question: "Compare the plot for temperature and pressure for profiles 10 and 20."
-    JSON Response:
-    {{
-        "sql_query": "SELECT n_prof, temperature, pressure FROM argo_profiles WHERE n_prof IN (10, 20);",
-        "visualization_types": ["plot"]
-    }}
-
-    User Question: "Plot a graph of salinity."
-    JSON Response:
-    {{
-        "sql_query": "SELECT pressure, salinity FROM argo_profiles ORDER BY n_prof, pressure LIMIT 50;",
         "visualization_types": ["plot"]
     }}
 
@@ -129,4 +129,3 @@ def execute_query(sql: str):
             return pd.read_sql_query(text(sql), conn), None
     except Exception as e:
         return None, str(e)
-
