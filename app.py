@@ -131,9 +131,9 @@ if user_prompt:
                                 st.caption("Float Trajectory/Positions")
                                 st.map(result_df[['latitude', 'longitude']])
                             
-                            # --- Plot Visualization (REWRITTEN for robustness) ---
+                            # --- Plot Visualization (UPDATED to remove multiselect) ---
                             if "plot" in requested_visuals:
-                                st.caption("Data Plot")
+                                st.caption("Profile Comparison")
 
                                 numeric_cols = result_df.select_dtypes(include=np.number).columns.tolist()
                                 if 'n_prof' in numeric_cols:
@@ -142,30 +142,21 @@ if user_prompt:
                                 if len(numeric_cols) < 2:
                                     st.warning("Not enough data columns to generate a plot.")
                                 else:
-                                    # Dynamically select axes, preferring common pairs
+                                    # Dynamically select axes
                                     x_axis = 'temperature' if 'temperature' in numeric_cols else 'salinity' if 'salinity' in numeric_cols else numeric_cols[0]
                                     y_axis = 'pressure' if 'pressure' in numeric_cols else numeric_cols[1]
                                     
-                                    # Case 1: Interactive multi-line plot
+                                    # Case 1: Multi-line plot if profile numbers are available
                                     if 'n_prof' in result_df.columns:
-                                        profile_options = sorted(result_df['n_prof'].unique())
-                                        selected_profiles = st.multiselect(
-                                            "Select Profiles to Compare:",
-                                            options=profile_options,
-                                            default=profile_options[:3]
-                                        )
-                                        if selected_profiles:
-                                            df_to_plot = result_df[result_df['n_prof'].isin(selected_profiles)].copy()
-                                            df_to_plot['n_prof'] = df_to_plot['n_prof'].astype(str)
-                                            
-                                            fig = px.line(df_to_plot, x=x_axis, y=y_axis, color='n_prof', title=f'{x_axis.capitalize()} vs. {y_axis.capitalize()}')
-                                            if y_axis == 'pressure':
-                                                fig.update_yaxes(autorange="reversed")
-                                            
-                                            st.plotly_chart(fig, use_container_width=True)
-                                            st.info("💡 Tip: Double-click a profile in the legend to view it in isolation.")
-                                        else:
-                                            st.warning("Please select at least one profile to display the plot.")
+                                        df_to_plot = result_df.copy()
+                                        df_to_plot['n_prof'] = df_to_plot['n_prof'].astype(str) # Ensure discrete colors
+                                        
+                                        fig = px.line(df_to_plot, x=x_axis, y=y_axis, color='n_prof', title=f'{x_axis.capitalize()} vs. {y_axis.capitalize()}')
+                                        if y_axis == 'pressure':
+                                            fig.update_yaxes(autorange="reversed")
+                                        
+                                        st.plotly_chart(fig, use_container_width=True)
+                                        st.info("💡 Tip: Double-click a profile in the legend to view it in isolation.")
                                     
                                     # Case 2: Simple single-line plot
                                     else:
