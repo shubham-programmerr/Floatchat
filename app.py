@@ -147,6 +147,9 @@ if user_prompt:
                                     # Filter the dataframe based on user selection
                                     df_to_plot = result_df[result_df['n_prof'].isin(selected_profiles)]
 
+                                    # --- FIX: Convert n_prof to string to ensure discrete colors ---
+                                    df_to_plot['n_prof'] = df_to_plot['n_prof'].astype(str)
+
                                     numeric_cols = df_to_plot.select_dtypes(include=np.number).columns.tolist()
                                     x_axis = 'temperature' if 'temperature' in numeric_cols else numeric_cols[0]
                                     y_axis = 'pressure' if 'pressure' in numeric_cols else numeric_cols[1]
@@ -181,3 +184,4 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
+
