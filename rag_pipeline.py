@@ -17,10 +17,7 @@ llm = ChatGroq(
     model="llama-3.1-8b-instant",
     groq_api_key=GROQ_API_KEY
 )
-# --- FIX: Removed connect_args for Neon.tech compatibility ---
-db_engine = create_engine(
-    DB_CONNECTION_STRING
-)
+db_engine = create_engine(DB_CONNECTION_STRING)
 
 @st.cache_resource
 def get_retriever_model():
@@ -43,7 +40,6 @@ index = faiss.IndexFlatL2(doc_embeddings.shape[1])
 index.add(doc_embeddings.astype('float32'))
 
 # --- Process User Question ---
-@st.cache_data
 def process_user_question(_question: str) -> dict:
     question_embedding = retriever_model.encode([_question])
     distances, indices = index.search(question_embedding.astype('float32'), k=4)
@@ -52,12 +48,13 @@ def process_user_question(_question: str) -> dict:
     template = """
     You are an expert PostgreSQL data scientist. Your task is to analyze a user's question about ARGO float data and return a JSON object with two fields: "sql_query" and "visualization_types".
 
-    RULES:
+    GENERAL RULES:
     1.  **sql_query**: Write a single, valid PostgreSQL query.
-    2.  **visualization_types**: A list of strings. It can be ["plot"], ["map"], ["plot", "map"], or an empty list [].
-    3.  If the user asks to "show" two or more numerical columns (e.g., "show temperature and pressure"), you MUST include "plot" in visualization_types.
-    4.  **CRITICAL RULE: When a user asks for a plot involving multiple profiles, you MUST include the `n_prof` column in the SELECT statement so they can be compared.**
-    5.  Return ONLY the JSON object, with no other text or markdown.
+    2.  **visualization_types**: A list of strings: ["plot"], ["map"], or [].
+    3.  **Prioritize User Numbers**: Always use the specific profile numbers or ranges the user provides. For "profiles 10 and 20", use `WHERE n_prof IN (10, 20)`. For "profiles 10 to 20", use `WHERE n_prof BETWEEN 10 AND 20`.
+    4.  **Default Plotting**: If a user asks for a plot but does NOT specify a profile number (e.g., "plot temperature vs pressure"), generate a query for the first 50 measurements (`LIMIT 50`).
+    5.  **Multi-Profile Plotting**: If a plot involves multiple profiles, you MUST include the `n_prof` column in the SELECT statement.
+    6.  **JSON Only**: Return ONLY the JSON object, with no other text.
 
     ### Schema:
     CREATE TABLE argo_profiles (n_prof INTEGER, latitude FLOAT, longitude FLOAT, timestamp TIMESTAMP, pressure FLOAT, temperature FLOAT, salinity FLOAT, geometry GEOMETRY(Point, 4326));
@@ -67,24 +64,24 @@ def process_user_question(_question: str) -> dict:
     
     ### Few-Shot Examples:
 
-    User Question: "What are the coordinates of the first 5 profiles?"
-    JSON Response:
-    {{
-        "sql_query": "SELECT n_prof, latitude, longitude FROM argo_profiles WHERE n_prof <= 5;",
-        "visualization_types": []
-    }}
-
-    User Question: "Map the path of the float for the first 10 profiles."
-    JSON Response:
-    {{
-        "sql_query": "SELECT latitude, longitude FROM argo_profiles WHERE n_prof <= 10;",
-        "visualization_types": ["map"]
-    }}
-
     User Question: "Plot the salinity vs pressure for profiles 1 through 5."
     JSON Response:
     {{
         "sql_query": "SELECT n_prof, salinity, pressure FROM argo_profiles WHERE n_prof BETWEEN 1 AND 5;",
+        "visualization_types": ["plot"]
+    }}
+
+    User Question: "Compare the plot for temperature and pressure for profiles 10 and 20."
+    JSON Response:
+    {{
+        "sql_query": "SELECT n_prof, temperature, pressure FROM argo_profiles WHERE n_prof IN (10, 20);",
+        "visualization_types": ["plot"]
+    }}
+
+    User Question: "Plot a graph of salinity."
+    JSON Response:
+    {{
+        "sql_query": "SELECT pressure, salinity FROM argo_profiles ORDER BY n_prof, pressure LIMIT 50;",
         "visualization_types": ["plot"]
     }}
 
@@ -102,7 +99,6 @@ def process_user_question(_question: str) -> dict:
         response = llm.invoke(prompt)
         content = response.content.strip()
         
-        # Clean the response to ensure it's valid JSON
         json_match = re.search(r'\{.*\}', content, re.DOTALL)
         if not json_match:
             return {"error": "Failed to parse AI response as JSON."}
@@ -110,7 +106,6 @@ def process_user_question(_question: str) -> dict:
         json_str = json_match.group(0)
         ai_json = json.loads(json_str)
         
-        # Clean the SQL query
         sql_query = ai_json.get("sql_query", "").strip()
         sql_query = re.sub(r"```sql|```", "", sql_query, flags=re.IGNORECASE).strip()
         select_pos = sql_query.upper().find("SELECT")
@@ -134,3 +129,4 @@ def execute_query(sql: str):
             return pd.read_sql_query(text(sql), conn), None
     except Exception as e:
         return None, str(e)
+

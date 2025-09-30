@@ -131,39 +131,37 @@ if user_prompt:
                                 st.caption("Float Trajectory/Positions")
                                 st.map(result_df[['latitude', 'longitude']])
                             
-                            # --- Plot Visualization (UPDATED to remove multiselect) ---
+                            # --- Plot Visualization ---
                             if "plot" in requested_visuals:
-                                st.caption("Profile Comparison")
+                                st.caption("Data Plot")
 
                                 numeric_cols = result_df.select_dtypes(include=np.number).columns.tolist()
-                                if 'n_prof' in numeric_cols:
-                                    numeric_cols.remove('n_prof')
+                                
+                                # Determine color column for multi-profile plots
+                                color_col = 'n_prof' if 'n_prof' in result_df.columns else None
+                                if color_col:
+                                    numeric_cols.remove(color_col)
 
                                 if len(numeric_cols) < 2:
                                     st.warning("Not enough data columns to generate a plot.")
                                 else:
-                                    # Dynamically select axes
-                                    x_axis = 'temperature' if 'temperature' in numeric_cols else 'salinity' if 'salinity' in numeric_cols else numeric_cols[0]
+                                    # Intelligently select axes
                                     y_axis = 'pressure' if 'pressure' in numeric_cols else numeric_cols[1]
+                                    x_candidates = ['temperature', 'salinity']
+                                    x_axis = next((col for col in x_candidates if col in numeric_cols), numeric_cols[0])
                                     
-                                    # Case 1: Multi-line plot if profile numbers are available
-                                    if 'n_prof' in result_df.columns:
-                                        df_to_plot = result_df.copy()
-                                        df_to_plot['n_prof'] = df_to_plot['n_prof'].astype(str) # Ensure discrete colors
-                                        
-                                        fig = px.line(df_to_plot, x=x_axis, y=y_axis, color='n_prof', title=f'{x_axis.capitalize()} vs. {y_axis.capitalize()}')
-                                        if y_axis == 'pressure':
-                                            fig.update_yaxes(autorange="reversed")
-                                        
-                                        st.plotly_chart(fig, use_container_width=True)
+                                    df_to_plot = result_df.copy()
+                                    if color_col:
+                                        df_to_plot[color_col] = df_to_plot[color_col].astype(str)
+
+                                    fig = px.line(df_to_plot, x=x_axis, y=y_axis, color=color_col, title=f'{x_axis.capitalize()} vs. {y_axis.capitalize()}')
+                                    
+                                    if y_axis == 'pressure':
+                                        fig.update_yaxes(autorange="reversed")
+                                    
+                                    st.plotly_chart(fig, use_container_width=True)
+                                    if color_col:
                                         st.info("💡 Tip: Double-click a profile in the legend to view it in isolation.")
-                                    
-                                    # Case 2: Simple single-line plot
-                                    else:
-                                        fig = px.line(result_df, x=x_axis, y=y_axis, title=f'{x_axis.capitalize()} vs. {y_axis.capitalize()}')
-                                        if y_axis == 'pressure':
-                                            fig.update_yaxes(autorange="reversed")
-                                        st.plotly_chart(fig, use_container_width=True)
 
                         with export_col:
                             st.caption("Download Data")
