@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import numpy as np  # ADDED THIS LINE TO FIX THE NAMERROR
+import numpy as np
 from rag_pipeline import process_user_question, execute_query
 
 # --- Page Configuration ---
@@ -43,7 +43,6 @@ st.markdown("""
     }
     [data-testid="stButton"] button:hover {
         background-color: #dddddd; border-color: #dddddd;
-        
     }
 </style>
 """, unsafe_allow_html=True)
@@ -132,28 +131,35 @@ if user_prompt:
                                 st.caption("Float Trajectory/Positions")
                                 st.map(result_df[['latitude', 'longitude']])
                             
-                            # --- Plot Visualization (UPDATED with flexible logic) ---
-                            if "plot" in requested_visuals:
+                            # --- Plot Visualization (UPDATED with interactive selector) ---
+                            if "plot" in requested_visuals and 'n_prof' in result_df.columns:
                                 st.caption("Profile Comparison")
-                                numeric_cols = result_df.select_dtypes(include=np.number).columns.tolist()
                                 
-                                # Try to find standard axes, otherwise use the first two numeric columns
-                                x_axis = 'temperature' if 'temperature' in numeric_cols else numeric_cols[0] if len(numeric_cols) > 0 else None
-                                y_axis = 'pressure' if 'pressure' in numeric_cols else numeric_cols[1] if len(numeric_cols) > 1 else None
-                                
-                                if x_axis and y_axis:
-                                    # Use n_prof for color if it exists, otherwise create a simple plot
-                                    color_axis = 'n_prof' if 'n_prof' in result_df.columns else None
+                                # Get unique profiles and create the multiselect widget
+                                profile_options = sorted(result_df['n_prof'].unique())
+                                selected_profiles = st.multiselect(
+                                    "Select Profiles to Compare:",
+                                    options=profile_options,
+                                    default=profile_options[:3] # Default to the first 3 profiles
+                                )
+
+                                if selected_profiles:
+                                    # Filter the dataframe based on user selection
+                                    df_to_plot = result_df[result_df['n_prof'].isin(selected_profiles)]
+
+                                    numeric_cols = df_to_plot.select_dtypes(include=np.number).columns.tolist()
+                                    x_axis = 'temperature' if 'temperature' in numeric_cols else numeric_cols[0]
+                                    y_axis = 'pressure' if 'pressure' in numeric_cols else numeric_cols[1]
                                     
-                                    fig = px.line(result_df, x=x_axis, y=y_axis, color=color_axis, title=f'{x_axis.capitalize()} vs. {y_axis.capitalize()}')
+                                    fig = px.line(df_to_plot, x=x_axis, y=y_axis, color='n_prof', title=f'{x_axis.capitalize()} vs. {y_axis.capitalize()}')
                                     
-                                    # Invert y-axis if it's pressure
                                     if y_axis == 'pressure':
                                         fig.update_yaxes(autorange="reversed")
-                                        
+                                    
                                     st.plotly_chart(fig, use_container_width=True)
+                                    st.info("💡 Tip: Double-click a profile in the legend to view it in isolation.")
                                 else:
-                                    st.warning("Not enough data columns to generate a plot.")
+                                    st.warning("Please select at least one profile to display the plot.")
 
                         with export_col:
                             st.caption("Download Data")
@@ -175,4 +181,3 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
-
