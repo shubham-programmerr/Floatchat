@@ -126,10 +126,13 @@ if user_prompt:
                         vis_col, export_col = st.columns([3, 1])
                         
                         with vis_col:
-                            # --- Map Visualization ---
-                            if "map" in requested_visuals and 'latitude' in result_df.columns and 'longitude' in result_df.columns:
-                                st.caption("Float Trajectory/Positions")
-                                st.map(result_df[['latitude', 'longitude']])
+                            # --- Map Visualization (UPDATED with error handling) ---
+                            if "map" in requested_visuals:
+                                if 'latitude' in result_df.columns and 'longitude' in result_df.columns:
+                                    st.caption("Float Trajectory/Positions")
+                                    st.map(result_df[['latitude', 'longitude']])
+                                else:
+                                    st.warning("Could not generate a map. The query did not return the required 'latitude' and 'longitude' columns.")
                             
                             # --- Plot Visualization ---
                             if "plot" in requested_visuals:
@@ -137,7 +140,6 @@ if user_prompt:
 
                                 numeric_cols = result_df.select_dtypes(include=np.number).columns.tolist()
                                 
-                                # Determine color column for multi-profile plots
                                 color_col = 'n_prof' if 'n_prof' in result_df.columns else None
                                 if color_col:
                                     numeric_cols.remove(color_col)
@@ -145,7 +147,6 @@ if user_prompt:
                                 if len(numeric_cols) < 2:
                                     st.warning("Not enough data columns to generate a plot.")
                                 else:
-                                    # Intelligently select axes
                                     y_axis = 'pressure' if 'pressure' in numeric_cols else numeric_cols[1]
                                     x_candidates = ['temperature', 'salinity']
                                     x_axis = next((col for col in x_candidates if col in numeric_cols), numeric_cols[0])
