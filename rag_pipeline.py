@@ -52,9 +52,10 @@ def process_user_question(_question: str) -> dict:
     1.  **sql_query**: Write a single, valid PostgreSQL query.
     2.  **visualization_types**: A list of strings: ["plot"], ["map"], or [].
     3.  **CRITICAL RULE: Only include "plot" in visualization_types if the user explicitly asks for a "plot", "graph", "chart", or "visualize". Simple "show" or "what is" questions should NOT generate a plot.**
-    4.  **Prioritize User Numbers**: Always use the specific profile numbers or ranges the user provides. For "profiles 10 and 20", use `WHERE n_prof IN (10, 20)`. For "profiles 10 to 20", use `WHERE n_prof BETWEEN 10 AND 20`.
-    5.  **Multi-Profile Plotting**: If a plot involves multiple profiles, you MUST include the `n_prof` column in the SELECT statement.
-    6.  **JSON Only**: Return ONLY the JSON object, with no other text.
+    4.  **Map Plotting**: If the user asks for a "map" or "path", you MUST include the `n_prof`, `latitude`, and `longitude` columns in the SELECT statement for labeling.
+    5.  **Prioritize User Numbers**: Always use the specific profile numbers or ranges the user provides. For "profiles 10 and 20", use `WHERE n_prof IN (10, 20)`. For "profiles 10 to 20", use `WHERE n_prof BETWEEN 10 AND 20`.
+    6.  **Multi-Profile Plotting**: If a plot involves multiple profiles, you MUST include the `n_prof` column in the SELECT statement.
+    7.  **JSON Only**: Return ONLY the JSON object, with no other text.
 
     ### Schema:
     CREATE TABLE argo_profiles (n_prof INTEGER, latitude FLOAT, longitude FLOAT, timestamp TIMESTAMP, pressure FLOAT, temperature FLOAT, salinity FLOAT, geometry GEOMETRY(Point, 4326));
@@ -74,7 +75,7 @@ def process_user_question(_question: str) -> dict:
     User Question: "Map the path of the float for the first 10 profiles."
     JSON Response:
     {{
-        "sql_query": "SELECT latitude, longitude FROM argo_profiles WHERE n_prof <= 10;",
+        "sql_query": "SELECT n_prof, latitude, longitude FROM argo_profiles WHERE n_prof <= 10;",
         "visualization_types": ["map"]
     }}
 

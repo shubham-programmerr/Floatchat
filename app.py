@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import numpy as np
+import pydeck as pdk # Import pydeck
 from rag_pipeline import process_user_question, execute_query
 
 # --- Page Configuration ---
@@ -126,40 +127,71 @@ if user_prompt:
                         vis_col, export_col = st.columns([3, 1])
                         
                         with vis_col:
-                            # --- Map Visualization (UPDATED with error handling) ---
+                            # --- Map Visualization (UPDATED with pydeck and trajectory line) ---
                             if "map" in requested_visuals:
-                                if 'latitude' in result_df.columns and 'longitude' in result_df.columns:
-                                    st.caption("Float Trajectory/Positions")
-                                    st.map(result_df[['latitude', 'longitude']])
+                                if 'latitude' in result_df.columns and 'longitude' in result_df.columns and 'n_prof' in result_df.columns:
+                                    st.caption("Float Trajectory/Positions (Hover for Profile ID)")
+                                    
+                                    # Ensure data is sorted for the line
+                                    map_df = result_df.sort_values(by='n_prof').copy()
+
+                                    view_state = pdk.ViewState(
+                                        latitude=map_df["latitude"].mean(),
+                                        longitude=map_df["longitude"].mean(),
+                                        zoom=3,
+                                        pitch=50,
+                                    )
+
+                                    # Layer for the points
+                                    scatter_layer = pdk.Layer(
+                                        "ScatterplotLayer",
+                                        data=map_df,
+                                        get_position="[longitude, latitude]",
+                                        get_color="[200, 30, 0, 160]",
+                                        get_radius=15000, # Increased radius for better visibility
+                                        pickable=True,
+                                    )
+
+                                    # Layer for the connecting line
+                                    line_layer = pdk.Layer(
+                                        "PathLayer",
+                                        data=map_df,
+                                        get_path="[[longitude, latitude]]", # PathLayer expects a list of coordinates
+                                        get_color="[0, 150, 200, 160]",
+                                        width_min_pixels=2,
+                                    )
+
+                                    tooltip = {"html": "<b>Profile:</b> {n_prof}<br/><b>Lat:</b> {latitude}<br/><b>Lon:</b> {longitude}"}
+
+                                    st.pydeck_chart(pdk.Deck(
+                                        map_style="mapbox://styles/mapbox/dark-v9",
+                                        initial_view_state=view_state,
+                                        layers=[line_layer, scatter_layer], # Render line layer first
+                                        tooltip=tooltip
+                                    ))
                                 else:
-                                    st.warning("Could not generate a map. The query did not return the required 'latitude' and 'longitude' columns.")
+                                    st.warning("Could not generate a map. The query did not return the required 'n_prof', 'latitude', and 'longitude' columns.")
+
                             
                             # --- Plot Visualization ---
                             if "plot" in requested_visuals:
                                 st.caption("Data Plot")
-
                                 numeric_cols = result_df.select_dtypes(include=np.number).columns.tolist()
-                                
                                 color_col = 'n_prof' if 'n_prof' in result_df.columns else None
                                 if color_col:
                                     numeric_cols.remove(color_col)
-
                                 if len(numeric_cols) < 2:
                                     st.warning("Not enough data columns to generate a plot.")
                                 else:
                                     y_axis = 'pressure' if 'pressure' in numeric_cols else numeric_cols[1]
                                     x_candidates = ['temperature', 'salinity']
                                     x_axis = next((col for col in x_candidates if col in numeric_cols), numeric_cols[0])
-                                    
                                     df_to_plot = result_df.copy()
                                     if color_col:
                                         df_to_plot[color_col] = df_to_plot[color_col].astype(str)
-
                                     fig = px.line(df_to_plot, x=x_axis, y=y_axis, color=color_col, title=f'{x_axis.capitalize()} vs. {y_axis.capitalize()}')
-                                    
                                     if y_axis == 'pressure':
                                         fig.update_yaxes(autorange="reversed")
-                                    
                                     st.plotly_chart(fig, use_container_width=True)
                                     if color_col:
                                         st.info("💡 Tip: Double-click a profile in the legend to view it in isolation.")
