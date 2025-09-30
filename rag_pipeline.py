@@ -17,9 +17,9 @@ llm = ChatGroq(
     model="llama-3.1-8b-instant",
     groq_api_key=GROQ_API_KEY
 )
+# --- FIX: Removed connect_args for Neon.tech compatibility ---
 db_engine = create_engine(
-    DB_CONNECTION_STRING,
-    connect_args={"options": "-c statement_timeout=15000"}
+    DB_CONNECTION_STRING
 )
 
 @st.cache_resource
