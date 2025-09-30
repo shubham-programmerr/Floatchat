@@ -1,3 +1,4 @@
+# rag_pipeline.py
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -14,11 +15,12 @@ DB_CONNECTION_STRING = st.secrets["connections"]["postgres"]["url"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
-    groq_api_key=GROQ_API_KEY,
-    temperature=0, # Set to 0 for deterministic JSON output
-    model_kwargs={"response_format": {"type": "json_object"}},
+    groq_api_key=GROQ_API_KEY
 )
-db_engine = create_engine(DB_CONNECTION_STRING)
+db_engine = create_engine(
+    DB_CONNECTION_STRING,
+    connect_args={"options": "-c statement_timeout=15000"}
+)
 
 @st.cache_resource
 def get_retriever_model():
@@ -26,7 +28,7 @@ def get_retriever_model():
 
 retriever_model = get_retriever_model()
 
-# --- Build the In-Memory FAISS Vector Store ---
+# --- FAISS Vector Store ---
 metadata_docs = [
     "Table 'argo_profiles' contains oceanographic data from ARGO floats.",
     "Column 'n_prof' is the unique identifier for each profile (measurement cycle).",
@@ -40,86 +42,90 @@ doc_embeddings = retriever_model.encode(metadata_docs)
 index = faiss.IndexFlatL2(doc_embeddings.shape[1])
 index.add(doc_embeddings.astype('float32'))
 
-# --- Process User Question (AI Core) ---
-def process_user_question(question: str) -> dict:
-    """
-    Analyzes a user's question to generate a SQL query and determine the
-    specific type of visualization requested (plot, map, or none).
-    """
-    question_embedding = retriever_model.encode([question])
-    _, indices = index.search(question_embedding.astype('float32'), k=3)
+# --- Process User Question ---
+@st.cache_data
+def process_user_question(_question: str) -> dict:
+    question_embedding = retriever_model.encode([_question])
+    distances, indices = index.search(question_embedding.astype('float32'), k=4)
     context = "\n".join([metadata_docs[i] for i in indices[0]])
 
     template = """
-    You are an expert PostgreSQL data analyst. Your task is to analyze a user's question about ARGO ocean data and return a JSON object with two keys: "sql_query" and "visualization_types".
+    You are an expert PostgreSQL data scientist. Your task is to analyze a user's question about ARGO float data and return a JSON object with two fields: "sql_query" and "visualization_types".
 
-    1.  **sql_query**: Write a single, valid PostgreSQL query to answer the user's question.
-    2.  **visualization_types**: A list of strings specifying what to visualize.
-        - If the user asks to "plot", "chart", "visualize", or "show" data with two or more numerical variables (like temperature and pressure), include "plot".
-        - If the user asks to "map" or see a "path" or "trajectory", include "map".
-        - If the user only asks for data without a visual request, the list should be empty, like [].
-
-    - Output ONLY the JSON object. Do not include markdown, code fences, or explanations.
+    RULES:
+    1.  **sql_query**: Write a single, valid PostgreSQL query.
+    2.  **visualization_types**: A list of strings. It can be ["plot"], ["map"], ["plot", "map"], or an empty list [].
+    3.  If the user asks to "show" two or more numerical columns (e.g., "show temperature and pressure"), you MUST include "plot" in visualization_types.
+    4.  **CRITICAL RULE: When a user asks for a plot involving multiple profiles, you MUST include the `n_prof` column in the SELECT statement so they can be compared.**
+    5.  Return ONLY the JSON object, with no other text or markdown.
 
     ### Schema:
-    CREATE TABLE argo_profiles (
-        n_prof INTEGER, 
-        latitude FLOAT, 
-        longitude FLOAT, 
-        timestamp TIMESTAMP, 
-        pressure FLOAT, 
-        temperature FLOAT, 
-        salinity FLOAT, 
-        geometry GEOMETRY(Point, 4326)
-    );
+    CREATE TABLE argo_profiles (n_prof INTEGER, latitude FLOAT, longitude FLOAT, timestamp TIMESTAMP, pressure FLOAT, temperature FLOAT, salinity FLOAT, geometry GEOMETRY(Point, 4326));
 
     ### Context:
     {context}
     
-    ### Examples:
-    User Question: "Show me the temperature vs pressure for the most recent 5 profiles."
-    Your Response:
+    ### Few-Shot Examples:
+
+    User Question: "What are the coordinates of the first 5 profiles?"
+    JSON Response:
     {{
-        "sql_query": "SELECT n_prof, temperature, pressure FROM argo_profiles ORDER BY timestamp DESC, n_prof DESC LIMIT 5;",
-        "visualization_types": ["plot"]
+        "sql_query": "SELECT n_prof, latitude, longitude FROM argo_profiles WHERE n_prof <= 5;",
+        "visualization_types": []
     }}
-    
+
     User Question: "Map the path of the float for the first 10 profiles."
-    Your Response:
+    JSON Response:
     {{
-        "sql_query": "SELECT latitude, longitude FROM argo_profiles WHERE n_prof <= 10 ORDER BY n_prof;",
+        "sql_query": "SELECT latitude, longitude FROM argo_profiles WHERE n_prof <= 10;",
         "visualization_types": ["map"]
     }}
 
-    User Question: "What is the average temperature?"
-    Your Response:
+    User Question: "Plot the salinity vs pressure for profiles 1 through 5."
+    JSON Response:
     {{
-        "sql_query": "SELECT AVG(temperature) as average_temperature FROM argo_profiles;",
-        "visualization_types": []
+        "sql_query": "SELECT n_prof, salinity, pressure FROM argo_profiles WHERE n_prof BETWEEN 1 AND 5;",
+        "visualization_types": ["plot"]
     }}
 
     ### User Question:
     {question}
 
-    ### Your Response (JSON only):
+    ### JSON Response:
     """
     prompt = PromptTemplate.from_template(template).format(
         context=context,
-        question=question
+        question=_question
     )
     
     try:
         response = llm.invoke(prompt)
+        content = response.content.strip()
+        
         # Clean the response to ensure it's valid JSON
-        cleaned_response = response.content.strip().replace("```json", "").replace("```", "")
-        return json.loads(cleaned_response)
-    except Exception as e:
-        print(f"Error parsing AI response: {e}")
-        return {"error": str(e), "sql_query": None, "visualization_types": []}
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if not json_match:
+            return {"error": "Failed to parse AI response as JSON."}
+        
+        json_str = json_match.group(0)
+        ai_json = json.loads(json_str)
+        
+        # Clean the SQL query
+        sql_query = ai_json.get("sql_query", "").strip()
+        sql_query = re.sub(r"```sql|```", "", sql_query, flags=re.IGNORECASE).strip()
+        select_pos = sql_query.upper().find("SELECT")
+        if select_pos != -1:
+            sql_query = sql_query[select_pos:]
+        ai_json["sql_query"] = sql_query
+
+        return ai_json
+
+    except (json.JSONDecodeError, Exception) as e:
+        return {"error": f"An error occurred while processing the AI response: {str(e)}"}
+
 
 # --- Execute SQL Safely ---
 def execute_query(sql: str):
-    """Executes the SQL query and returns a DataFrame and an error message."""
     if not sql or not sql.strip().upper().startswith("SELECT"):
         return None, "❌ Only SELECT queries are allowed for safety."
 
