@@ -131,38 +131,48 @@ if user_prompt:
                                 st.caption("Float Trajectory/Positions")
                                 st.map(result_df[['latitude', 'longitude']])
                             
-                            # --- Plot Visualization (CORRECTED with flexible logic) ---
+                            # --- Plot Visualization (REWRITTEN for robustness) ---
                             if "plot" in requested_visuals:
                                 st.caption("Data Plot")
-                                # Case 1: Interactive plot if profile numbers are available
-                                if 'n_prof' in result_df.columns:
-                                    profile_options = sorted(result_df['n_prof'].unique())
-                                    selected_profiles = st.multiselect(
-                                        "Select Profiles to Compare:",
-                                        options=profile_options,
-                                        default=profile_options[:3]
-                                    )
-                                    if selected_profiles:
-                                        df_to_plot = result_df[result_df['n_prof'].isin(selected_profiles)]
-                                        df_to_plot['n_prof'] = df_to_plot['n_prof'].astype(str)
-                                        fig = px.line(df_to_plot, x='temperature', y='pressure', color='n_prof', title='Temperature vs. Pressure')
-                                        fig.update_yaxes(autorange="reversed")
-                                        st.plotly_chart(fig, use_container_width=True)
-                                        st.info("💡 Tip: Double-click a profile in the legend to view it in isolation.")
-                                    else:
-                                        st.warning("Please select at least one profile to display the plot.")
-                                # Case 2: Simple plot if no profile numbers are available
+
+                                numeric_cols = result_df.select_dtypes(include=np.number).columns.tolist()
+                                if 'n_prof' in numeric_cols:
+                                    numeric_cols.remove('n_prof')
+
+                                if len(numeric_cols) < 2:
+                                    st.warning("Not enough data columns to generate a plot.")
                                 else:
-                                    numeric_cols = result_df.select_dtypes(include=np.number).columns.tolist()
-                                    if len(numeric_cols) >= 2:
-                                        x_axis = numeric_cols[0]
-                                        y_axis = numeric_cols[1]
+                                    # Dynamically select axes, preferring common pairs
+                                    x_axis = 'temperature' if 'temperature' in numeric_cols else 'salinity' if 'salinity' in numeric_cols else numeric_cols[0]
+                                    y_axis = 'pressure' if 'pressure' in numeric_cols else numeric_cols[1]
+                                    
+                                    # Case 1: Interactive multi-line plot
+                                    if 'n_prof' in result_df.columns:
+                                        profile_options = sorted(result_df['n_prof'].unique())
+                                        selected_profiles = st.multiselect(
+                                            "Select Profiles to Compare:",
+                                            options=profile_options,
+                                            default=profile_options[:3]
+                                        )
+                                        if selected_profiles:
+                                            df_to_plot = result_df[result_df['n_prof'].isin(selected_profiles)].copy()
+                                            df_to_plot['n_prof'] = df_to_plot['n_prof'].astype(str)
+                                            
+                                            fig = px.line(df_to_plot, x=x_axis, y=y_axis, color='n_prof', title=f'{x_axis.capitalize()} vs. {y_axis.capitalize()}')
+                                            if y_axis == 'pressure':
+                                                fig.update_yaxes(autorange="reversed")
+                                            
+                                            st.plotly_chart(fig, use_container_width=True)
+                                            st.info("💡 Tip: Double-click a profile in the legend to view it in isolation.")
+                                        else:
+                                            st.warning("Please select at least one profile to display the plot.")
+                                    
+                                    # Case 2: Simple single-line plot
+                                    else:
                                         fig = px.line(result_df, x=x_axis, y=y_axis, title=f'{x_axis.capitalize()} vs. {y_axis.capitalize()}')
                                         if y_axis == 'pressure':
                                             fig.update_yaxes(autorange="reversed")
                                         st.plotly_chart(fig, use_container_width=True)
-                                    else:
-                                        st.warning("Not enough data columns to generate a plot.")
 
                         with export_col:
                             st.caption("Download Data")
