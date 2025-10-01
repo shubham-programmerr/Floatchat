@@ -10,7 +10,8 @@ from rag_pipeline import process_user_question, execute_query
 st.set_page_config(
     page_title="ProCode-FloatChat",
     page_icon="🌊",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded" # Force sidebar to be open on load
 )
 
 # --- Custom CSS for a better UI ---
@@ -217,4 +218,3 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
-
