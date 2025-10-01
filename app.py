@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import numpy as np
-import pydeck as pdk # Import pydeck
+# Pydeck is no longer needed
 from rag_pipeline import process_user_question, execute_query
 
 # --- Page Configuration ---
@@ -127,48 +127,26 @@ if user_prompt:
                         vis_col, export_col = st.columns([3, 1])
                         
                         with vis_col:
-                            # --- Map Visualization (UPDATED with pydeck and trajectory line) ---
+                            # --- Map Visualization (UPDATED to use Plotly, no API key needed) ---
                             if "map" in requested_visuals:
                                 if 'latitude' in result_df.columns and 'longitude' in result_df.columns and 'n_prof' in result_df.columns:
                                     st.caption("Float Trajectory/Positions (Hover for Profile ID)")
                                     
-                                    # Ensure data is sorted for the line
                                     map_df = result_df.sort_values(by='n_prof').copy()
+                                    
+                                    fig = px.line_mapbox(map_df,
+                                                         lat="latitude",
+                                                         lon="longitude",
+                                                         hover_name="n_prof",
+                                                         zoom=3,
+                                                         height=600)
 
-                                    view_state = pdk.ViewState(
-                                        latitude=map_df["latitude"].mean(),
-                                        longitude=map_df["longitude"].mean(),
-                                        zoom=3,
-                                        pitch=50,
-                                    )
-
-                                    # Layer for the points
-                                    scatter_layer = pdk.Layer(
-                                        "ScatterplotLayer",
-                                        data=map_df,
-                                        get_position="[longitude, latitude]",
-                                        get_color="[200, 30, 0, 160]",
-                                        get_radius=15000, # Increased radius for better visibility
-                                        pickable=True,
-                                    )
-
-                                    # Layer for the connecting line
-                                    line_layer = pdk.Layer(
-                                        "PathLayer",
-                                        data=map_df,
-                                        get_path="[[longitude, latitude]]", # PathLayer expects a list of coordinates
-                                        get_color="[0, 150, 200, 160]",
-                                        width_min_pixels=2,
-                                    )
-
-                                    tooltip = {"html": "<b>Profile:</b> {n_prof}<br/><b>Lat:</b> {latitude}<br/><b>Lon:</b> {longitude}"}
-
-                                    st.pydeck_chart(pdk.Deck(
-                                        map_style="mapbox://styles/mapbox/dark-v9",
-                                        initial_view_state=view_state,
-                                        layers=[line_layer, scatter_layer], # Render line layer first
-                                        tooltip=tooltip
-                                    ))
+                                    fig.update_layout(mapbox_style="open-street-map",
+                                                      mapbox_zoom=3,
+                                                      mapbox_center_lat = map_df['latitude'].mean(),
+                                                      margin={"r":0,"t":0,"l":0,"b":0})
+                                    
+                                    st.plotly_chart(fig, use_container_width=True)
                                 else:
                                     st.warning("Could not generate a map. The query did not return the required 'n_prof', 'latitude', and 'longitude' columns.")
 

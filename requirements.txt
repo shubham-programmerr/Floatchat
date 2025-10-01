@@ -1,10 +1,7 @@
-# requirements.txt
-
-# --- Frontend ---
+#--- Frontend ---
 streamlit
-pydeck 
 
-# --- Data Processing ---
+#--- Data Processing ---
 pandas
 xarray
 netcdf4
@@ -12,13 +9,13 @@ dask
 pyarrow
 toml
 
-# --- Database & Geospatial ---
+#--- Database & Geospatial ---
 sqlalchemy
 psycopg2-binary
 geopandas
 geoalchemy2
 
-# --- AI & Language Model ---
+#--- AI & Language Model ---
 langchain
 langchain-core
 langchain-groq
@@ -26,5 +23,6 @@ sentence-transformers
 faiss-cpu
 tiktoken
 
-# --- Visualization ---
+#--- Visualization ---
 plotly
+numpy
