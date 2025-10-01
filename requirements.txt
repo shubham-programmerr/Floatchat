@@ -1,5 +1,6 @@
 #--- Frontend ---
 streamlit
+pydeck
 
 #--- Data Processing ---
 pandas

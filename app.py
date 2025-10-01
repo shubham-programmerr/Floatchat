@@ -2,8 +2,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go # Import graph_objects for advanced maps
 import numpy as np
+import pydeck as pdk # Import pydeck
 from rag_pipeline import process_user_question, execute_query
 
 # --- Page Configuration ---
@@ -127,34 +127,43 @@ if user_prompt:
                         vis_col, export_col = st.columns([3, 1])
                         
                         with vis_col:
-                            # --- Map Visualization (Using Plotly for true zoom without pydeck) ---
+                            # --- Map Visualization (Using Pydeck for true dynamic zoom) ---
                             if "map" in requested_visuals:
                                 if 'latitude' in result_df.columns and 'longitude' in result_df.columns and 'n_prof' in result_df.columns:
                                     st.caption("Float Positions (Hover for Profile ID)")
                                     
                                     map_df = result_df.sort_values(by='n_prof').copy()
 
-                                    fig = go.Figure(go.Scattermapbox(
-                                        mode="markers",
-                                        lon=map_df['longitude'],
-                                        lat=map_df['latitude'],
-                                        marker=dict(
-                                            size=8, 
-                                            color='red'
-                                        ),
-                                        hoverinfo='text',
-                                        hovertext=[f"Profile: {p}<br>Lat: {lat}<br>Lon: {lon}" for p, lat, lon in zip(map_df['n_prof'], map_df['latitude'], map_df['longitude'])],
-                                    ))
-
-                                    fig.update_layout(
-                                        mapbox_style="carto-darkmatter", # Dark map with country outlines
-                                        mapbox_center_lon=map_df['longitude'].mean(),
-                                        mapbox_center_lat=map_df['latitude'].mean(),
-                                        mapbox_zoom=4,
-                                        margin={"r":0,"t":0,"l":0,"b":0},
-                                        showlegend=False
+                                    view_state = pdk.ViewState(
+                                        latitude=map_df["latitude"].mean(),
+                                        longitude=map_df["longitude"].mean(),
+                                        zoom=4,
+                                        pitch=45,
                                     )
-                                    st.plotly_chart(fig, use_container_width=True)
+
+                                    scatter_layer = pdk.Layer(
+                                        "ScatterplotLayer",
+                                        data=map_df,
+                                        get_position="[longitude, latitude]",
+                                        get_color="[255, 0, 0, 200]", # Red dots
+                                        get_radius=5000, # Radius in meters
+                                        pickable=True,
+                                    )
+                                    
+                                    tooltip = {
+                                        "html": "<b>Profile:</b> {n_prof}<br/><b>Lat:</b> {latitude}<br/><b>Lon:</b> {longitude}",
+                                        "style": {"backgroundColor": "#333333", "color": "white", "border": "1px solid #444444"}
+                                    }
+                                    
+                                    mapbox_key = st.secrets.get("MAPBOX_API_KEY")
+
+                                    st.pydeck_chart(pdk.Deck(
+                                        map_style="mapbox://styles/mapbox/dark-v9" if mapbox_key else None,
+                                        mapbox_key=mapbox_key,
+                                        initial_view_state=view_state,
+                                        layers=[scatter_layer],
+                                        tooltip=tooltip
+                                    ))
                                 else:
                                     st.warning("Could not generate a map. Query did not return 'n_prof', 'latitude', and 'longitude'.")
                             
@@ -201,3 +210,4 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
+
