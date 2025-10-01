@@ -49,14 +49,10 @@ st.markdown("""
     [data-testid="stToolbar"] {
         display: none !important;
     }
-    /* Hide the sidebar */
-    [data-testid="stSidebar"] {
-        display: none;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- Sidebar (Hidden by CSS but logic remains) ---
+# --- Sidebar ---
 with st.sidebar:
     st.title("🌊 FloatChat")
     st.markdown("An AI-powered conversational interface for exploring ARGO ocean data. Ask questions in natural language and get back data, charts, and maps.")
@@ -221,3 +217,4 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
+
