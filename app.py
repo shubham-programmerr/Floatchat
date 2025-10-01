@@ -2,8 +2,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go # Import graph_objects for advanced maps
 import numpy as np
-# Pydeck is no longer needed
 from rag_pipeline import process_user_question, execute_query
 
 # --- Page Configuration ---
@@ -127,28 +127,46 @@ if user_prompt:
                         vis_col, export_col = st.columns([3, 1])
                         
                         with vis_col:
-                            # --- Map Visualization (UPDATED to use Plotly, no API key needed) ---
+                            # --- Map Visualization (Switched to Plotly for better map backgrounds) ---
                             if "map" in requested_visuals:
                                 if 'latitude' in result_df.columns and 'longitude' in result_df.columns and 'n_prof' in result_df.columns:
                                     st.caption("Float Trajectory/Positions (Hover for Profile ID)")
                                     
                                     map_df = result_df.sort_values(by='n_prof').copy()
-                                    
-                                    fig = px.line_mapbox(map_df,
-                                                         lat="latitude",
-                                                         lon="longitude",
-                                                         hover_name="n_prof",
-                                                         zoom=3,
-                                                         height=600)
 
-                                    fig.update_layout(mapbox_style="open-street-map",
-                                                      mapbox_zoom=3,
-                                                      mapbox_center_lat = map_df['latitude'].mean(),
-                                                      margin={"r":0,"t":0,"l":0,"b":0})
-                                    
+                                    fig = go.Figure()
+
+                                    # Add the trajectory line
+                                    fig.add_trace(go.Scattermapbox(
+                                        mode="lines",
+                                        lon=map_df['longitude'],
+                                        lat=map_df['latitude'],
+                                        line=dict(color='cyan'),
+                                        name='Trajectory'
+                                    ))
+
+                                    # Add the points (dots)
+                                    fig.add_trace(go.Scattermapbox(
+                                        mode="markers",
+                                        lon=map_df['longitude'],
+                                        lat=map_df['latitude'],
+                                        marker=dict(size=8, color='red'),
+                                        hoverinfo='text',
+                                        hovertext=[f"Profile: {p}<br>Lat: {lat}<br>Lon: {lon}" for p, lat, lon in zip(map_df['n_prof'], map_df['latitude'], map_df['longitude'])],
+                                        name='Positions'
+                                    ))
+
+                                    fig.update_layout(
+                                        mapbox_style="carto-darkmatter", # Dark map background
+                                        mapbox_center_lon=map_df['longitude'].mean(),
+                                        mapbox_center_lat=map_df['latitude'].mean(),
+                                        mapbox_zoom=3,
+                                        margin={"r":0,"t":0,"l":0,"b":0},
+                                        showlegend=False
+                                    )
                                     st.plotly_chart(fig, use_container_width=True)
                                 else:
-                                    st.warning("Could not generate a map. The query did not return the required 'n_prof', 'latitude', and 'longitude' columns.")
+                                    st.warning("Could not generate a map. Query did not return 'n_prof', 'latitude', and 'longitude'.")
 
                             
                             # --- Plot Visualization ---
@@ -194,3 +212,4 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
+
