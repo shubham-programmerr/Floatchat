@@ -141,7 +141,7 @@ if user_prompt:
                                         mode="markers",
                                         lon=map_df['longitude'],
                                         lat=map_df['latitude'],
-                                        marker=dict(size=8, color='red'), # Reduced size for clarity
+                                        marker=dict(size=5, color='red'), # Reduced size for clarity
                                         hoverinfo='text',
                                         hovertext=[f"Profile: {p}<br>Lat: {lat}<br>Lon: {lon}" for p, lat, lon in zip(map_df['n_prof'], map_df['latitude'], map_df['longitude'])],
                                         name='Positions'
@@ -151,7 +151,7 @@ if user_prompt:
                                         mapbox_style="carto-darkmatter", # Dark map with country outlines
                                         mapbox_center_lon=map_df['longitude'].mean(),
                                         mapbox_center_lat=map_df['latitude'].mean(),
-                                        mapbox_zoom=3,
+                                        mapbox_zoom=4, # Increased zoom
                                         margin={"r":0,"t":0,"l":0,"b":0},
                                         showlegend=False
                                     )
