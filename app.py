@@ -155,15 +155,19 @@ if user_prompt:
                                         "style": {"backgroundColor": "#333333", "color": "white", "border": "1px solid #444444"}
                                     }
                                     
+                                    # Conditionally build deck arguments to avoid TypeError
                                     mapbox_key = st.secrets.get("MAPBOX_API_KEY")
+                                    deck_kwargs = {
+                                        "initial_view_state": view_state,
+                                        "layers": [scatter_layer],
+                                        "tooltip": tooltip
+                                    }
+                                    if mapbox_key:
+                                        deck_kwargs["map_style"] = "mapbox://styles/mapbox/dark-v9"
+                                        deck_kwargs["mapbox_key"] = mapbox_key
+                                    
+                                    st.pydeck_chart(pdk.Deck(**deck_kwargs))
 
-                                    st.pydeck_chart(pdk.Deck(
-                                        map_style="mapbox://styles/mapbox/dark-v9" if mapbox_key else None,
-                                        mapbox_key=mapbox_key,
-                                        initial_view_state=view_state,
-                                        layers=[scatter_layer],
-                                        tooltip=tooltip
-                                    ))
                                 else:
                                     st.warning("Could not generate a map. Query did not return 'n_prof', 'latitude', and 'longitude'.")
                             
