@@ -138,7 +138,7 @@ if user_prompt:
                                         latitude=map_df["latitude"].mean(),
                                         longitude=map_df["longitude"].mean(),
                                         zoom=4,
-                                        pitch=45,
+                                        pitch=0, # Set to 0 for a top-down view
                                     )
 
                                     scatter_layer = pdk.Layer(
@@ -155,7 +155,6 @@ if user_prompt:
                                         "style": {"backgroundColor": "#333333", "color": "white", "border": "1px solid #444444"}
                                     }
                                     
-                                    # Conditionally build deck arguments to avoid TypeError
                                     mapbox_key = st.secrets.get("MAPBOX_API_KEY")
                                     deck_kwargs = {
                                         "initial_view_state": view_state,
@@ -214,4 +213,3 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
-
