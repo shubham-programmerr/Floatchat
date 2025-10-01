@@ -127,31 +127,30 @@ if user_prompt:
                         vis_col, export_col = st.columns([3, 1])
                         
                         with vis_col:
-                            # --- Map Visualization (UPDATED to show dots only) ---
+                            # --- Map Visualization (Using Plotly for true zoom without pydeck) ---
                             if "map" in requested_visuals:
                                 if 'latitude' in result_df.columns and 'longitude' in result_df.columns and 'n_prof' in result_df.columns:
                                     st.caption("Float Positions (Hover for Profile ID)")
                                     
                                     map_df = result_df.sort_values(by='n_prof').copy()
 
-                                    fig = go.Figure()
-
-                                    # Add the red dots with hover labels
-                                    fig.add_trace(go.Scattermapbox(
+                                    fig = go.Figure(go.Scattermapbox(
                                         mode="markers",
                                         lon=map_df['longitude'],
                                         lat=map_df['latitude'],
-                                        marker=dict(size=5, color='red'), # Reduced size for clarity
+                                        marker=dict(
+                                            size=8, 
+                                            color='red'
+                                        ),
                                         hoverinfo='text',
                                         hovertext=[f"Profile: {p}<br>Lat: {lat}<br>Lon: {lon}" for p, lat, lon in zip(map_df['n_prof'], map_df['latitude'], map_df['longitude'])],
-                                        name='Positions'
                                     ))
 
                                     fig.update_layout(
                                         mapbox_style="carto-darkmatter", # Dark map with country outlines
                                         mapbox_center_lon=map_df['longitude'].mean(),
                                         mapbox_center_lat=map_df['latitude'].mean(),
-                                        mapbox_zoom=4, # Increased zoom
+                                        mapbox_zoom=4,
                                         margin={"r":0,"t":0,"l":0,"b":0},
                                         showlegend=False
                                     )
@@ -202,4 +201,3 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
-
