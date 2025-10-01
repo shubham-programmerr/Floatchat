@@ -49,10 +49,14 @@ st.markdown("""
     [data-testid="stToolbar"] {
         display: none !important;
     }
+    /* Hide the sidebar */
+    [data-testid="stSidebar"] {
+        display: none;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- Sidebar ---
+# --- Sidebar (Hidden by CSS but logic remains) ---
 with st.sidebar:
     st.title("🌊 FloatChat")
     st.markdown("An AI-powered conversational interface for exploring ARGO ocean data. Ask questions in natural language and get back data, charts, and maps.")
