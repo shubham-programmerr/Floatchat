@@ -127,7 +127,7 @@ if user_prompt:
                         vis_col, export_col = st.columns([3, 1])
                         
                         with vis_col:
-                            # --- Map Visualization (UPDATED for better point visibility) ---
+                            # --- Map Visualization (FIXED: Removed invalid 'line' property) ---
                             if "map" in requested_visuals:
                                 if 'latitude' in result_df.columns and 'longitude' in result_df.columns and 'n_prof' in result_df.columns:
                                     st.caption("Float Trajectory/Positions (Hover for Profile ID)")
@@ -145,15 +145,14 @@ if user_prompt:
                                         name='Trajectory'
                                     ))
 
-                                    # Add the points (dots) with hover labels and a border
+                                    # Add the points (dots) with hover labels
                                     fig.add_trace(go.Scattermapbox(
                                         mode="markers",
                                         lon=map_df['longitude'],
                                         lat=map_df['latitude'],
                                         marker=dict(
                                             size=10, 
-                                            color='red',
-                                            line=dict(width=1, color='white') # White border for contrast
+                                            color='red'
                                         ),
                                         hoverinfo='text',
                                         hovertext=[f"Profile: {p}<br>Lat: {lat}<br>Lon: {lon}" for p, lat, lon in zip(map_df['n_prof'], map_df['latitude'], map_df['longitude'])],
@@ -216,4 +215,3 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
-
