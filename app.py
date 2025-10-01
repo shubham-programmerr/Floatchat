@@ -11,7 +11,7 @@ st.set_page_config(
     page_title="ProCode-FloatChat",
     page_icon="🌊",
     layout="wide",
-    initial_sidebar_state="expanded" # Force sidebar to be open on load
+    initial_sidebar_state="expanded" # Ensure sidebar is visible by default
 )
 
 # --- Custom CSS for a better UI ---
@@ -46,7 +46,7 @@ st.markdown("""
     [data-testid="stButton"] button:hover {
         background-color: #dddddd; border-color: #dddddd;
     }
-    /* --- FIX: Hide the Streamlit toolbar --- */
+    /* Hide the Streamlit toolbar */
     [data-testid="stToolbar"] {
         display: none !important;
     }
@@ -218,3 +218,5 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
+
+
