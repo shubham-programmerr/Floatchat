@@ -127,7 +127,7 @@ if user_prompt:
                         vis_col, export_col = st.columns([3, 1])
                         
                         with vis_col:
-                            # --- Map Visualization (Switched to Plotly for better map backgrounds) ---
+                            # --- Map Visualization (UPDATED for better point visibility) ---
                             if "map" in requested_visuals:
                                 if 'latitude' in result_df.columns and 'longitude' in result_df.columns and 'n_prof' in result_df.columns:
                                     st.caption("Float Trajectory/Positions (Hover for Profile ID)")
@@ -136,23 +136,26 @@ if user_prompt:
 
                                     fig = go.Figure()
 
-                                    # Add the trajectory line
+                                    # Add the trajectory line first, so dots appear on top
                                     fig.add_trace(go.Scattermapbox(
                                         mode="lines",
                                         lon=map_df['longitude'],
                                         lat=map_df['latitude'],
-                                        line=dict(color='cyan'),
+                                        line=dict(color='cyan', width=2),
                                         name='Trajectory'
                                     ))
 
-                                    # Add the points (dots) with hover labels
+                                    # Add the points (dots) with hover labels and a border
                                     fig.add_trace(go.Scattermapbox(
                                         mode="markers",
                                         lon=map_df['longitude'],
                                         lat=map_df['latitude'],
-                                        marker=dict(size=8, color='red'),
+                                        marker=dict(
+                                            size=10, 
+                                            color='red',
+                                            line=dict(width=1, color='white') # White border for contrast
+                                        ),
                                         hoverinfo='text',
-                                        # This line creates the label text for each point
                                         hovertext=[f"Profile: {p}<br>Lat: {lat}<br>Lon: {lon}" for p, lat, lon in zip(map_df['n_prof'], map_df['latitude'], map_df['longitude'])],
                                         name='Positions'
                                     ))
@@ -213,3 +216,4 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
+
