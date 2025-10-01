@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import numpy as np
-import pydeck as pdk # Import pydeck
+import pydeck as pdk
 from rag_pipeline import process_user_question, execute_query
 
 # --- Page Configuration ---
@@ -44,6 +44,10 @@ st.markdown("""
     }
     [data-testid="stButton"] button:hover {
         background-color: #dddddd; border-color: #dddddd;
+    }
+    /* --- FIX: Hide the Streamlit toolbar --- */
+    [data-testid="stToolbar"] {
+        display: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -137,16 +141,16 @@ if user_prompt:
                                     view_state = pdk.ViewState(
                                         latitude=map_df["latitude"].mean(),
                                         longitude=map_df["longitude"].mean(),
-                                        zoom=7, # Increased zoom from 4 to 7
-                                        pitch=0, # Set to 0 for a top-down view
+                                        zoom=7,
+                                        pitch=0,
                                     )
 
                                     scatter_layer = pdk.Layer(
                                         "ScatterplotLayer",
                                         data=map_df,
                                         get_position="[longitude, latitude]",
-                                        get_color="[255, 0, 0, 200]", # Red dots
-                                        get_radius=5000, # Radius in meters
+                                        get_color="[255, 0, 0, 200]",
+                                        get_radius=5000,
                                         pickable=True,
                                     )
                                     
