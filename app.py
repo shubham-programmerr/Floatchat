@@ -137,7 +137,7 @@ if user_prompt:
                                     view_state = pdk.ViewState(
                                         latitude=map_df["latitude"].mean(),
                                         longitude=map_df["longitude"].mean(),
-                                        zoom=4,
+                                        zoom=7, # Increased zoom from 4 to 7
                                         pitch=0, # Set to 0 for a top-down view
                                     )
 
