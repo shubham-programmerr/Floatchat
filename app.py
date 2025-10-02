@@ -11,7 +11,7 @@ st.set_page_config(
     page_title="ProCode-FloatChat",
     page_icon="🌊",
     layout="wide",
-    initial_sidebar_state="expanded" # FIX: Ensure sidebar is open by default
+    initial_sidebar_state="expanded"
 )
 
 # --- Custom CSS for a better UI ---
@@ -50,6 +50,10 @@ st.markdown("""
     [data-testid="stToolbar"] {
         display: none !important;
     }
+    /* --- FIX: Force the sidebar to be visible --- */
+    [data-testid="stSidebar"] {
+        display: block !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -73,9 +77,6 @@ with st.sidebar:
 
 # --- Main App Logic ---
 st.title("FloatChat Interface")
-
-# The info message is no longer needed
-# st.info("💡 Click the '>' icon in the top-left corner to see example prompts!")
 
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "Hello! How can I help you explore the ARGO float data today?"}]
@@ -221,3 +222,4 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
+
