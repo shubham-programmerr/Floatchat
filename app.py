@@ -60,7 +60,7 @@ with st.sidebar:
     st.title("🌊 FloatChat")
     st.markdown("An AI-powered conversational interface for exploring ARGO ocean data. Ask questions in natural language and get back data, charts, and maps.")
     st.markdown("---")
-    st.info("This project was developed by **ProCode** for the Smart India Hackathon.")
+    st.info("This project was developed by **ProCode**.")
 
 
 # --- Main App Logic ---
