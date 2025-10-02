@@ -60,11 +60,17 @@ with st.sidebar:
     st.title("🌊 FloatChat")
     st.markdown("An AI-powered conversational interface for exploring ARGO ocean data. Ask questions in natural language and get back data, charts, and maps.")
     st.markdown("---")
-    st.info("This project was developed by **ProCode**.")
+    st.info("This project was developed by **ProCode** for the Smart India Hackathon.")
 
 
 # --- Main App Logic ---
 st.title("FloatChat Interface")
+
+# --- ADDED: Description of the prototype's scope ---
+st.info(
+    "ℹ️ **Note:** This prototype is currently configured to query data from a single ARGO float (ID: 1902671) "
+    "and is using a limited dataset of its first 50 profiles."
+)
 
 # --- Example Prompts on Main Screen ---
 st.markdown("##### Try an example prompt:")
@@ -229,4 +235,3 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
-
