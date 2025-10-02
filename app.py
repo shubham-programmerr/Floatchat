@@ -72,27 +72,35 @@ with st.sidebar:
 # --- Main App Logic ---
 st.title("FloatChat Interface")
 
-# --- Description for multi-float capability ---
+# --- UPDATED: Description with specific float examples ---
 st.info(
-    f"ℹ️ **Note:** You are currently querying data for ARGO float **{float_id}**. "
-    "You can change the float ID in the sidebar."
+    f"ℹ️ **Note:** You are currently querying for float **{float_id}**. "
+    "You can change the ID in the sidebar (e.g., try `1902671` or `5906266`)."
 )
 
-# --- Example Prompts on Main Screen ---
+# --- UPDATED: Example Prompts now include the float_id context ---
 st.markdown("##### Try an example prompt:")
 example_prompts = [
+    f"Show temperature and pressure for the first 10 profiles for float {float_id}",
+    f"Plot salinity vs pressure for profiles 1 through 5 for float {float_id}",
+    f"Map the float's path for the first 50 profiles for float {float_id}",
+    f"What is the average temperature for each of the first 5 profiles for float {float_id}?"
+]
+
+# Create columns for the buttons
+# We use the raw prompt for the button text to keep it clean
+raw_prompts = [
     "Show the temperature and pressure for the first 10 profiles.",
     "Plot the salinity vs pressure for profiles 1 through 5.",
     "Map the float's path for the first 50 profiles.",
     "What is the average temperature for each of the first 5 profiles?"
 ]
-
-# Create columns for the buttons
-cols = st.columns(len(example_prompts))
-for i, prompt in enumerate(example_prompts):
+cols = st.columns(len(raw_prompts))
+for i, (raw_prompt, full_prompt) in enumerate(zip(raw_prompts, example_prompts)):
     with cols[i]:
-        if st.button(prompt, key=f"example_{i}"):
-            st.session_state.prefilled_prompt = prompt
+        if st.button(raw_prompt, key=f"example_{i}"):
+            # When button is clicked, use the full prompt with the float ID
+            st.session_state.prefilled_prompt = full_prompt
 
 st.markdown("---") # Add a separator
 
@@ -100,29 +108,51 @@ st.markdown("---") # Add a separator
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "Hello! How can I help you explore the ARGO float data today?"}]
 
+# Display chat messages from history, but show the simplified user prompt
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        if isinstance(message["content"], pd.DataFrame):
-            st.dataframe(message["content"], use_container_width=True)
+        # A bit of logic to display the raw prompt in the chat history
+        content = message["content"]
+        if isinstance(content, str) and f" for float {float_id}" in content:
+            display_content = content.replace(f" for float {float_id}", "")
         else:
-            st.markdown(message["content"])
+            display_content = content
 
-user_prompt = st.chat_input("Ask about the ARGO data...", key="chat_input")
-if st.session_state.get("prefilled_prompt"):
-    user_prompt = st.session_state.prefilled_prompt
+        if isinstance(display_content, pd.DataFrame):
+            st.dataframe(display_content, use_container_width=True)
+        else:
+            st.markdown(display_content)
+
+user_prompt_from_input = st.chat_input("Ask about the ARGO data...", key="chat_input")
+user_prompt_from_button = st.session_state.get("prefilled_prompt")
+
+final_user_prompt = None
+if user_prompt_from_input:
+    # If user types, combine their text with the float_id
+    final_user_prompt = f"{user_prompt_from_input} for float {float_id}"
+    st.session_state.messages.append({"role": "user", "content": user_prompt_from_input})
+
+elif user_prompt_from_button:
+    # If user clicks button, use the full prompt from the button
+    final_user_prompt = user_prompt_from_button
+    simplified_prompt = user_prompt_from_button.replace(f" for float {float_id}", "")
+    st.session_state.messages.append({"role": "user", "content": simplified_prompt})
     del st.session_state.prefilled_prompt
 
-if user_prompt:
-    # --- Combine user prompt with float_id context ---
-    full_prompt = f"{user_prompt} for float {float_id}"
 
-    st.session_state.messages.append({"role": "user", "content": user_prompt})
-    with st.chat_message("user"):
-        st.markdown(user_prompt)
+if final_user_prompt:
+    # Rerun to show the user message immediately
+    st.rerun()
 
+# This block will now run on the rerun after a message is added
+if st.session_state.messages[-1]["role"] == "user":
     with st.chat_message("assistant"):
         with st.spinner("Analyzing your question and querying the database..."):
-            ai_response = process_user_question(full_prompt) # Send the combined prompt
+            # Use the last message content which is the full prompt
+            last_user_message = st.session_state.messages[-1]["content"]
+            full_prompt_to_process = f"{last_user_message} for float {float_id}"
+            
+            ai_response = process_user_question(full_prompt_to_process)
             sql_query = ai_response.get("sql_query")
             requested_visuals = ai_response.get("visualization_types", [])
             ai_error = ai_response.get("error")
@@ -158,7 +188,6 @@ if user_prompt:
                         vis_col, export_col = st.columns([3, 1])
                         
                         with vis_col:
-                            # --- Map Visualization (Using Pydeck for true dynamic zoom) ---
                             if "map" in requested_visuals:
                                 if 'latitude' in result_df.columns and 'longitude' in result_df.columns and 'n_prof' in result_df.columns:
                                     st.caption("Float Positions (Hover for Profile ID)")
@@ -201,7 +230,6 @@ if user_prompt:
                                 else:
                                     st.warning("Could not generate a map. Query did not return 'n_prof', 'latitude', and 'longitude'.")
                             
-                            # --- Plot Visualization ---
                             if "plot" in requested_visuals:
                                 st.caption("Data Plot")
                                 numeric_cols = result_df.select_dtypes(include=np.number).columns.tolist()
