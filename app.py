@@ -11,7 +11,7 @@ st.set_page_config(
     page_title="ProCode-FloatChat",
     page_icon="🌊",
     layout="wide",
-    initial_sidebar_state="expanded" # This is the official way to show the sidebar
+    initial_sidebar_state="expanded" 
 )
 
 # --- Custom CSS for a better UI ---
@@ -39,16 +39,18 @@ st.markdown("""
     }
     [data-testid="stChatInputContainer"] { border-top: 1px solid #333333; }
     [data-testid="stChatInput"] { color: #ffffff; }
-    [data-testid="stButton"] button {
-        background-color: #ffffff; color: #121212;
-        border: 1px solid #ffffff; border-radius: 0.5rem;
+    /* Main screen button styling */
+    .stButton>button {
+        background-color: #333333;
+        color: #ffffff;
+        border: 1px solid #444444;
+        border-radius: 0.5rem;
+        width: 100%;
     }
-    [data-testid="stButton"] button:hover {
-        background-color: #dddddd; border-color: #dddddd;
-    }
-    /* Hide the Streamlit toolbar */
-    [data-testid="stToolbar"] {
-        display: none !important;
+    .stButton>button:hover {
+        background-color: #444444;
+        border-color: #555555;
+        color: #ffffff;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -58,22 +60,31 @@ with st.sidebar:
     st.title("🌊 FloatChat")
     st.markdown("An AI-powered conversational interface for exploring ARGO ocean data. Ask questions in natural language and get back data, charts, and maps.")
     st.markdown("---")
-    st.header("Example Prompts")
-    
-    example_prompts = [
-        "Show the temperature and pressure for the first 10 profiles.",
-        "Plot the salinity vs pressure for profiles 1 through 5.",
-        "Map the float's path for the first 50 profiles.",
-        "What is the average temperature for each of the first 5 profiles?"
-    ]
-    
-    for prompt in example_prompts:
-        if st.button(prompt):
-            st.session_state.prefilled_prompt = prompt
+    st.info("This project was developed by **ProCode** for the Smart India Hackathon.")
+
 
 # --- Main App Logic ---
 st.title("FloatChat Interface")
 
+# --- Example Prompts on Main Screen ---
+st.markdown("##### Try an example prompt:")
+example_prompts = [
+    "Show the temperature and pressure for the first 10 profiles.",
+    "Plot the salinity vs pressure for profiles 1 through 5.",
+    "Map the float's path for the first 50 profiles.",
+    "What is the average temperature for each of the first 5 profiles?"
+]
+
+# Create columns for the buttons
+cols = st.columns(len(example_prompts))
+for i, prompt in enumerate(example_prompts):
+    with cols[i]:
+        if st.button(prompt, key=f"example_{i}"):
+            st.session_state.prefilled_prompt = prompt
+
+st.markdown("---") # Add a separator
+
+# --- Chat History and Input ---
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "Hello! How can I help you explore the ARGO float data today?"}]
 
@@ -218,3 +229,4 @@ if user_prompt:
                     with st.expander("📊 Export", expanded=True):
                         csv = result_df.to_csv(index=False).encode('utf-8')
                         st.download_button("Download as CSV", csv, "argo_data.csv", "text/csv", key='export_csv_no_viz')
+
