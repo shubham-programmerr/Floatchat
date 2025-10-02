@@ -26,8 +26,10 @@ def get_retriever_model():
 retriever_model = get_retriever_model()
 
 # --- FAISS Vector Store ---
+# UPDATED: Added context for the new float_id column
 metadata_docs = [
     "Table 'argo_profiles' contains oceanographic data from ARGO floats.",
+    "Column 'float_id' is the identifier for the specific ARGO float.",
     "Column 'n_prof' is the unique identifier for each profile (measurement cycle).",
     "Column 'latitude' and 'longitude' are the float's coordinates.",
     "Column 'timestamp' is the date and time of the measurement.",
@@ -45,44 +47,43 @@ def process_user_question(_question: str) -> dict:
     distances, indices = index.search(question_embedding.astype('float32'), k=4)
     context = "\n".join([metadata_docs[i] for i in indices[0]])
 
+    # UPDATED: Prompt now includes the float_id column in the schema and examples
     template = """
-    You are an expert PostgreSQL data scientist. Your task is to analyze a user's question about ARGO float data and return a JSON object with two fields: "sql_query" and "visualization_types".
+    You are an expert PostgreSQL data scientist. Your task is to analyze a user's question about ARGO float data and return a JSON object with "sql_query" and "visualization_types".
 
-    GENERAL RULES:
-    1.  **sql_query**: Write a single, valid PostgreSQL query.
-    2.  **visualization_types**: A list of strings: ["plot"], ["map"], or [].
-    3.  **CRITICAL RULE: Only include "plot" in visualization_types if the user explicitly asks for a "plot", "graph", "chart", or "visualize". Simple "show" or "what is" questions should NOT generate a plot.**
-    4.  **Map Plotting**: If the user asks for a "map" or "path", you MUST include the `n_prof`, `latitude`, and `longitude` columns in the SELECT statement for labeling.
-    5.  **Prioritize User Numbers**: Always use the specific profile numbers or ranges the user provides. For "profiles 10 and 20", use `WHERE n_prof IN (10, 20)`. For "profiles 10 to 20", use `WHERE n_prof BETWEEN 10 AND 20`.
-    6.  **Multi-Profile Plotting**: If a plot involves multiple profiles, you MUST include the `n_prof` column in the SELECT statement.
-    7.  **JSON Only**: Return ONLY the JSON object, with no other text.
+    RULES:
+    1.  **sql_query**: Write a single, valid PostgreSQL query. You MUST filter by the `float_id` when the user specifies one in their question.
+    2.  **visualization_types**: A list of strings: ["plot"], ["map"], ["plot", "map"], or [].
+    3.  If a user asks to "plot" or "graph" something but doesn't specify profiles, get the data for the first 50 measurements (ORDER BY timestamp LIMIT 50).
+    4.  If the user asks for a map, YOU MUST include `n_prof`, `latitude`, and `longitude` in the SELECT statement.
+    5.  When a user asks for a plot of multiple profiles, YOU MUST include `n_prof` in the SELECT statement.
+    6.  Return ONLY the JSON object.
 
     ### Schema:
-    CREATE TABLE argo_profiles (n_prof INTEGER, latitude FLOAT, longitude FLOAT, timestamp TIMESTAMP, pressure FLOAT, temperature FLOAT, salinity FLOAT, geometry GEOMETRY(Point, 4326));
+    CREATE TABLE argo_profiles (float_id TEXT, n_prof INTEGER, latitude FLOAT, longitude FLOAT, timestamp TIMESTAMP, pressure FLOAT, temperature FLOAT, salinity FLOAT, geometry GEOMETRY(Point, 4326));
 
     ### Context:
     {context}
     
     ### Few-Shot Examples:
-
-    User Question: "Show the temperature for profiles 1 to 5."
+    User Question: "Map the path for the first 10 profiles for float 1902671"
     JSON Response:
     {{
-        "sql_query": "SELECT n_prof, temperature FROM argo_profiles WHERE n_prof BETWEEN 1 AND 5;",
-        "visualization_types": []
-    }}
-
-    User Question: "Map the path of the float for the first 10 profiles."
-    JSON Response:
-    {{
-        "sql_query": "SELECT n_prof, latitude, longitude FROM argo_profiles WHERE n_prof <= 10;",
+        "sql_query": "SELECT n_prof, latitude, longitude FROM argo_profiles WHERE float_id = '1902671' AND n_prof <= 10;",
         "visualization_types": ["map"]
     }}
 
-    User Question: "Plot the salinity vs pressure for profiles 1 through 5."
+    User Question: "Plot the salinity vs pressure for profiles 1 through 5 for float 2902205."
     JSON Response:
     {{
-        "sql_query": "SELECT n_prof, salinity, pressure FROM argo_profiles WHERE n_prof BETWEEN 1 AND 5;",
+        "sql_query": "SELECT n_prof, salinity, pressure FROM argo_profiles WHERE float_id = '2902205' AND n_prof BETWEEN 1 AND 5;",
+        "visualization_types": ["plot"]
+    }}
+    
+    User Question: "Compare the plot for temperature and pressure for profiles 10 and 20 for float 6903240"
+    JSON Response:
+    {{
+        "sql_query": "SELECT n_prof, temperature, pressure FROM argo_profiles WHERE float_id = '6903240' AND n_prof IN (10, 20);",
         "visualization_types": ["plot"]
     }}
 
@@ -118,7 +119,6 @@ def process_user_question(_question: str) -> dict:
 
     except (json.JSONDecodeError, Exception) as e:
         return {"error": f"An error occurred while processing the AI response: {str(e)}"}
-
 
 # --- Execute SQL Safely ---
 def execute_query(sql: str):

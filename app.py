@@ -60,16 +60,22 @@ with st.sidebar:
     st.title("🌊 FloatChat")
     st.markdown("An AI-powered conversational interface for exploring ARGO ocean data. Ask questions in natural language and get back data, charts, and maps.")
     st.markdown("---")
-    st.info("This project was developed by **ProCode** .")
+    
+    # --- Input for specific float ID ---
+    st.header("Select a Float")
+    float_id = st.text_input("Enter ARGO Float ID:", value="1902671")
+    
+    st.markdown("---")
+    st.info("This project was developed by **ProCode** for the Smart India Hackathon.")
 
 
 # --- Main App Logic ---
 st.title("FloatChat Interface")
 
-# --- ADDED: Description of the prototype's scope ---
+# --- Description for multi-float capability ---
 st.info(
-    "ℹ️ **Note:** This prototype is currently configured to query data from a single ARGO float (ID: 1902671) "
-    "and is using a limited dataset of its first 50 profiles."
+    f"ℹ️ **Note:** You are currently querying data for ARGO float **{float_id}**. "
+    "You can change the float ID in the sidebar."
 )
 
 # --- Example Prompts on Main Screen ---
@@ -107,13 +113,16 @@ if st.session_state.get("prefilled_prompt"):
     del st.session_state.prefilled_prompt
 
 if user_prompt:
+    # --- Combine user prompt with float_id context ---
+    full_prompt = f"{user_prompt} for float {float_id}"
+
     st.session_state.messages.append({"role": "user", "content": user_prompt})
     with st.chat_message("user"):
         st.markdown(user_prompt)
 
     with st.chat_message("assistant"):
         with st.spinner("Analyzing your question and querying the database..."):
-            ai_response = process_user_question(user_prompt)
+            ai_response = process_user_question(full_prompt) # Send the combined prompt
             sql_query = ai_response.get("sql_query")
             requested_visuals = ai_response.get("visualization_types", [])
             ai_error = ai_response.get("error")
